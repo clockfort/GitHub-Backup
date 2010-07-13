@@ -18,6 +18,10 @@ This is useful in many cases:
   - You are paranoid tinfoil-hat wearer who needs to back up everything in triplicate on a variety of outdated tape media.
 
 
+Usage
+-----
+"./github-backup.pl USERNAME BACKUP_DIRECTORY"
+
 Questions, Improvements, Etc
 -----------------------------
 
