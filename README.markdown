@@ -5,7 +5,15 @@ By Chris Lockfort (devnull@csh.rit.edu) (Github username: Clockfort)
 
 GitHub-Backup makes a local backup copy of all of a github user's  (or github organization's) repositories. 
 
-This is useful in many cases:
+Usage
+-----
+"./github-backup.pl USERNAME BACKUP_DIRECTORY"
+
+Then, put it in a cron job somewhere and forget about it for eternity.
+
+Why This Software Exists
+-------------------------
+This software is useful in many cases:
 
   - GitHub suddenly explodes.
 
@@ -17,10 +25,6 @@ This is useful in many cases:
 
   - You are paranoid tinfoil-hat wearer who needs to back up everything in triplicate on a variety of outdated tape media.
 
-
-Usage
------
-"./github-backup.pl USERNAME BACKUP_DIRECTORY"
 
 Questions, Improvements, Etc
 -----------------------------

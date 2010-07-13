@@ -16,10 +16,6 @@ my @giturls = grep s/  :url: http/git/, @urls;
 @urls = @giturls;
 my @reponames = grep s/.*$username\///, @giturls;
 
-foreach my $name (@reponames){
-	print "NAME: $name\n";
-}
-
 for(my $i = 0; $i < @urls; ++$i){
 	my $url = $urls[$i];
 	my $name = $reponames[$i];
@@ -27,11 +23,11 @@ for(my $i = 0; $i < @urls; ++$i){
 		system("mkdir $backupdir") and die "Couldn't make $backupdir.\n";
 	}
 	unless(-e "$backupdir/$name"){ #We haven't backed this up before, let's clone it
-		print "CLONING $url\n";
+		print "CLONING REPOSITORY: $url\n";
 		system("cd backups && git clone $url") and die "Encountered an error while git-cloning repository $name\n";
 	}
 	else{ #We've backed it up before, just fetch the most recent copy
-		print "EXISTED, FETCHING $name\n";
+		print "REPOSITORY EXISTED, FETCHING: $name\n";
 		system("cd $backupdir/$name && git fetch -q") and die "Encountered an error while git-fetching repository $name\n";
 	}
 }
