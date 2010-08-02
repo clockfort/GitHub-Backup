@@ -24,7 +24,7 @@ for(my $i = 0; $i < @urls; ++$i){
 	}
 	unless(-e "$backupdir/$name"){ #We haven't backed this up before, let's clone it
 		print "CLONING REPOSITORY: $url\n";
-		system("cd backups && git clone $url") and die "Encountered an error while git-cloning repository $name\n";
+		system("cd $backupdir && git clone $url") and die "Encountered an error while git-cloning repository $name\n";
 	}
 	else{ #We've backed it up before, just fetch the most recent copy
 		print "REPOSITORY EXISTED, FETCHING: $name\n";
