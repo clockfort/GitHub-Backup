@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Author: Anthony Gargiulo (anthony@agargiulo.com)
 # Created Fri Jun 15 2012
