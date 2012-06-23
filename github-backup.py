@@ -9,12 +9,8 @@ import os
 
 def main():
    # A sane way to handle command line args.
-   parser = ArgumentParser(description="makes a local backup copy of all of a github user's repositories")
-   parser.add_argument("username", help="A Github username")
-   parser.add_argument("backupdir", help="The folder where you want your backups to go", default="./backups")
-   parser.add_argument("-v","--verbose", help="Produces more output", action="store_true")
-
    # Now actually store the args
+   parser = init_parser()
    args = parser.parse_args()
 
    # Make the connection to Github here.
@@ -22,10 +18,23 @@ def main():
 
    # Get all of the given user's repos
    user_repos = gh.repos.list(args.username).all()
-   #print user_repos[0].__dict__
    for repo in user_repos:
-      os.system('git clone {} {}/{}'.format(repo.git_url, args.backupdir, repo.name))
+      process_repo(repo, args)
+
+def init_parser():
+   """
+   set up the argument parser
+   """
+   parser = ArgumentParser(
+   description="makes a backup of all of a github user's repositories")
+   parser.add_argument("username", help="A Github username")
+   parser.add_argument("backupdir",
+      help="The folder where you want your backups to go")
+   parser.add_argument("-c","--cron", help="Use this when running from a cron job",
+      action="store_true")
+   return parser
+
+
 
 if __name__ == "__main__":
    main()
-   print("foobar")
