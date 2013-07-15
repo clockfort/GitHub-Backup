@@ -42,14 +42,14 @@ def process_repo(repo, args):
       git_args = ""
 
    if not args.cron:
-      print("Processing repo: {}".format(repo.full_name))
+      print("Processing repo: %s"%(repo.full_name))
 
-   if os.access('{}/{}/.git'.format(args.backupdir,repo.name),os.F_OK):
+   if os.access('%s/%s/.git'%(args.backupdir,repo.name),os.F_OK):
       if not args.cron:
          print("Repo already exists, let's try to update it instead")
-      os.system('cd {}/{};git pull {}'.format(args.backupdir, repo.name, git_args))
+      os.system('cd %s/%s;git pull %s'%(args.backupdir, repo.name, git_args))
    else: # Repo doesn't exist, let's clone it
-      os.system('git clone {} {} {}/{}'.format(git_args, repo.git_url, args.backupdir, repo.name))
+      os.system('git clone %s %s %s/%s'%(git_args, repo.git_url, args.backupdir, repo.name))
 
 if __name__ == "__main__":
    main()
