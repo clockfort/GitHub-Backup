@@ -1,14 +1,14 @@
 GitHub-Backup
 =============
 
-Idea By Chris Lockfort (devnull@csh.rit.edu) (Github username: Clockfort)
-Python version By Anthony Gargiulo (anthony@agargiulo.com) (Github username: agargiulo)
+Idea by Chris Lockfort (devnull@csh.rit.edu) (Github username: Clockfort)
+Python version by Anthony Gargiulo (anthony@agargiulo.com) (Github username: agargiulo)
 
 GitHub-Backup makes a local backup copy of all of a github user's  (or github organization's) repositories. 
 
 Usage
 -----
-"./github-backup.py USERNAME BACKUPDIR [-c|--cron] [-h|--help]"
+    ./github-backup.py USERNAME BACKUPDIR [-c|--cron] [-h|--help]
 
 Then, put it in a cron job somewhere and forget about it for eternity.
 
@@ -30,4 +30,4 @@ This software is useful in many cases:
 Questions, Improvements, Etc
 -----------------------------
 
-If you have any improvements, I'm happy, (grateful, in fact) to entertain pull requests/ patches, just drop me a line or message me on GitHub.
+If you have any improvements, I'm happy, (grateful, in fact) to entertain pull requests/patches, just drop me a line or message me on GitHub.
