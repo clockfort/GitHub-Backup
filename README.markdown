@@ -1,7 +1,7 @@
 GitHub-Backup
 =============
 
-Idea by Chris Lockfort (devnull@csh.rit.edu) (Github username: Clockfort)
+Idea/original implementation by Chris Lockfort (clockfort@csh.rit.edu) (Github username: Clockfort)
 Python version by Anthony Gargiulo (anthony@agargiulo.com) (Github username: agargiulo)
 
 GitHub-Backup makes a local backup copy of all of a github user's  (or github organization's) repositories. 
