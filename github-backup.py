@@ -32,15 +32,14 @@ def init_parser():
    parser.add_argument("backupdir", help="The folder where you want your backups to go")
    parser.add_argument("-c","--cron", help="Use this when running from a cron job", action="store_true")
    parser.add_argument("-m","--mirror", help="Create a bare mirror", action="store_true")
+   parser.add_argument("-g","--git", help="Pass extra arguments to git", default="")
 
    return parser
 
 
 def process_repo(repo, args):
    if args.cron:
-      git_args = "-q"
-   else:
-      git_args = ""
+      args.git += "--quit"
 
    if not args.cron:
       print("Processing repo: %s"%(repo.full_name))
@@ -50,18 +49,20 @@ def process_repo(repo, args):
    if os.access(config,os.F_OK):
       if not args.cron:
          print("Repo already exists, let's try to update it instead")
+
       os.system("cd %s/%s"%(args.backupdir, repo.name))
+
       if args.mirror:
-         git_args += " --prune"
-         os.system("git fetch %s"%(git_args,))
+         args.git += " --prune"
+         os.system("git fetch %s"%(args.git,))
       else:
-         os.system("git pull %s"%(git_args,))
+         os.system("git pull %s"%(args.git,))
 
    else: # Repo doesn't exist, let's clone it
       if args.mirror:
-         git_args += " --mirror"
+         args.git += " --mirror"
 
-      os.system('git clone %s %s %s/%s'%(git_args, repo.git_url, args.backupdir, repo.name))
+      os.system('git clone %s %s %s/%s'%(args.git, repo.git_url, args.backupdir, repo.name))
 
 if __name__ == "__main__":
    main()
