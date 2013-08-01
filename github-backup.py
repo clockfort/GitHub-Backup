@@ -1,17 +1,24 @@
 #!/usr/bin/env python
 
-# Author: Anthony Gargiulo (anthony@agargiulo.com)
-# Created Fri Jun 15 2012
+"""
+Authors: Anthony Gargiulo (anthony@agargiulo.com)
+         Steffen Vogel (post@steffenvogel.de)
+
+Created: Fri Jun 15 2012
+"""
 
 from pygithub3 import Github
 from argparse import ArgumentParser
 import os
 
+
 def main():
-   # A sane way to handle command line args.
-   # Now actually store the args
    parser = init_parser()
    args = parser.parse_args()
+
+   # Process args
+   if args.cron:
+      args.git += "--quit"
 
    # Make the connection to Github here.
    gh = Github()
@@ -20,6 +27,7 @@ def main():
    user_repos = gh.repos.list(args.username).all()
    for repo in user_repos:
       process_repo(repo, args)
+
 
 def init_parser():
    """
@@ -39,32 +47,39 @@ def init_parser():
 
 
 def process_repo(repo, args):
-   if args.cron:
-      args.git += "--quit"
-
    if not args.cron:
       print("Processing repo: %s"%(repo.full_name))
 
    dir = "%s/%s"%(args.backupdir, repo.name + args.suffix)
    config = "%s/%s"%(dir, "config" if args.mirror else ".git/config")
 
-   if os.access(config,os.F_OK):
+   if os.access(config, os.F_OK):
       if not args.cron:
          print("Repo already exists, let's try to update it instead")
+      update_repo(repo, dir, args)
+   else:
+      if not args.cron:
+         print("Repo doesn't exists, lets clone it")
+      clone_repo(repo, dir, args)
 
+
+def clone_repo(repo, dir, args):
+      if args.mirror:
+         args.git += " --mirror"
+
+      os.system('git clone %s %s %s'%(args.git, repo.git_url, dir))
+
+
+def update_repo(repo, dir, args):
       os.system("cd %s"%(dir,))
 
+      # GitHub => Local
       if args.mirror:
          args.git += " --prune"
          os.system("git fetch %s"%(args.git,))
       else:
          os.system("git pull %s"%(args.git,))
 
-   else: # Repo doesn't exist, let's clone it
-      if args.mirror:
-         args.git += " --mirror"
-
-      os.system('git clone %s %s %s'%(args.git, repo.git_url, dir))
 
 if __name__ == "__main__":
    main()
