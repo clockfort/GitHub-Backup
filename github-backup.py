@@ -18,7 +18,7 @@ def main():
 
    # Process args
    if args.cron:
-      args.git += "--quit"
+      args.git += "--quiet"
 
    # Make the connection to Github here.
    gh = Github()
