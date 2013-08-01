@@ -10,6 +10,15 @@ Description
 
 GitHub-Backup makes a local backup copy of all of a github user's  (or github organization's) repositories. 
 
+Dependencies
+----
+
+GitHub-Backup requires `pygithub3` a Python library for the GitHub API v3.
+
+Installation is simple with
+
+	pip install pygithub3
+
 Usage
 -----
     ./github-backup.py USERNAME BACKUPDIR [-c|--cron] [-h|--help]
