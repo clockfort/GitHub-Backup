@@ -71,7 +71,8 @@ def clone_repo(repo, dir, args):
 
 
 def update_repo(repo, dir, args):
-      os.system("cd %s"%(dir,))
+      savedPath = os.getcwd()
+      os.chdir(dir)
 
       # GitHub => Local
       if args.mirror:
@@ -80,6 +81,7 @@ def update_repo(repo, dir, args):
       else:
          os.system("git pull %s"%(args.git,))
 
+      os.chdir(savedPath)
 
 if __name__ == "__main__":
    main()
