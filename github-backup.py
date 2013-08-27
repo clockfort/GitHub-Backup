@@ -26,6 +26,7 @@ def main():
    # Get all of the given user's repos
    user_repos = gh.repos.list(args.username).all()
    for repo in user_repos:
+      repo.user = gh.users.get(repo.owner.login)
       process_repo(repo, args)
 
 
@@ -45,7 +46,6 @@ def init_parser():
 
    return parser
 
-
 def process_repo(repo, args):
    if not args.cron:
       print("Processing repo: %s"%(repo.full_name))
@@ -53,14 +53,15 @@ def process_repo(repo, args):
    dir = "%s/%s"%(args.backupdir, repo.name + args.suffix)
    config = "%s/%s"%(dir, "config" if args.mirror else ".git/config")
 
-   if os.access(config, os.F_OK):
-      if not args.cron:
-         print("Repo already exists, let's try to update it instead")
-      update_repo(repo, dir, args)
-   else:
+   if not os.access(config, os.F_OK):
       if not args.cron:
          print("Repo doesn't exists, lets clone it")
       clone_repo(repo, dir, args)
+   else:
+      if not args.cron:
+         print("Repo already exists, let's try to update it instead")
+
+   update_repo(repo, dir, args)
 
 
 def clone_repo(repo, dir, args):
@@ -82,7 +83,18 @@ def update_repo(repo, dir, args):
       else:
          os.system("git pull %s"%(args.git,))
 
+      # Fetch description and owner (useful for gitweb, cgit etc.)
+      os.system("git config --local gitweb.description %s"%(shell_escape(repo.description),))
+      os.system("git config --local gitweb.owner %s"%(shell_escape("%s <%s>"%(repo.user.name, repo.user.email.encode("utf-8"))),))
+
+      os.system("git config --local cgit.name %s"%(shell_escape(repo.name),))
+      os.system("git config --local cgit.defbranch %s"%(shell_escape(repo.master_branch),))
+      os.system("git config --local cgit.clone-url %s"%(shell_escape(repo.clone_url),))
+      
       os.chdir(savedPath)
+
+def shell_escape(str):
+      return "'" + unicode(str.replace("'", "\\'")).encode("utf-8") + "'"
 
 if __name__ == "__main__":
    main()
