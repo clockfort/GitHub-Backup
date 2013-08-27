@@ -21,10 +21,16 @@ def main():
       args.git += "--quiet"
 
    # Make the connection to Github here.
-   gh = Github()
+   config = { 'user': args.username }
+
+   if (args.password):
+      config['password'] = args.password
+      config['login'] = args.username
+
+   gh = Github(**config)
 
    # Get all of the given user's repos
-   user_repos = gh.repos.list(args.username).all()
+   user_repos = gh.repos.list().all()
    for repo in user_repos:
       repo.user = gh.users.get(repo.owner.login)
       process_repo(repo, args)
@@ -43,6 +49,7 @@ def init_parser():
    parser.add_argument("-m","--mirror", help="Create a bare mirror", action="store_true")
    parser.add_argument("-g","--git", help="Pass extra arguments to git", default="", metavar="ARGS")
    parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
+   parser.add_argument("-p", "--password", help="Authenticate with Github API")
 
    return parser
 
