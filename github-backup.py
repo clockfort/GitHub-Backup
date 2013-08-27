@@ -65,9 +65,11 @@ def process_repo(repo, args):
 
 def clone_repo(repo, dir, args):
       if args.mirror:
-         args.git += " --mirror"
+         options = args.git + " --mirror"
+      else:
+         options = args.git
 
-      os.system('git clone %s %s %s'%(args.git, repo.git_url, dir))
+      os.system('git clone %s %s %s'%(options, repo.git_url, dir))
 
 
 def update_repo(repo, dir, args):
@@ -76,8 +78,7 @@ def update_repo(repo, dir, args):
 
       # GitHub => Local
       if args.mirror:
-         args.git += " --prune"
-         os.system("git fetch %s"%(args.git,))
+         os.system("git fetch %s"%(args.git + " --prune",))
       else:
          os.system("git pull %s"%(args.git,))
 
