@@ -30,7 +30,11 @@ def main():
 	gh = Github(**config)
 
 	# Get all of the given user's repos
-	user_repos = gh.repos.list().all()
+	if args.organization:
+		user_repos = gh.repos.list_by_org(args.organization).all()
+	else:
+		user_repos = gh.repos.list().all()
+
 	for repo in user_repos:
 		repo.user = gh.users.get(repo.owner.login)
 		process_repo(repo, args)
@@ -50,6 +54,7 @@ def init_parser():
 	parser.add_argument("-g","--git", help="Pass extra arguments to git", default="", metavar="ARGS")
 	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
+	parser.add_argument("-o","--organization", help="Backup Organizational repositories")
 
 	return parser
 
