@@ -56,6 +56,7 @@ def init_parser():
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
 	parser.add_argument("-P","--prefix", help="Add prefix to repository directory names", default="")
 	parser.add_argument("-o","--organization", help="Backup Organizational repositories")
+	parser.add_argument("-S","--ssh", help="Use SSH protocol", action="store_true")
 
 	return parser
 
@@ -81,7 +82,7 @@ def clone_repo(repo, dir, args):
 	else:
 		options = args.git
 
-	os.system('git clone %s %s %s'%(options, repo.git_url, dir))
+	os.system('git clone %s %s %s'%(options, repo.ssh_url if args.ssh else repo.git_url, dir))
 
 
 def update_repo(repo, dir, args):
