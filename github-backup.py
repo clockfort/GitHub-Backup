@@ -54,6 +54,7 @@ def init_parser():
 	parser.add_argument("-g","--git", help="Pass extra arguments to git", default="", metavar="ARGS")
 	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
+	parser.add_argument("-P","--prefix", help="Add prefix to repository directory names", default="")
 	parser.add_argument("-o","--organization", help="Backup Organizational repositories")
 
 	return parser
@@ -62,7 +63,7 @@ def process_repo(repo, args):
 	if not args.cron:
 		print("Processing repo: %s"%(repo.full_name))
 
-	dir = "%s/%s"%(args.backupdir, repo.name + args.suffix)
+	dir = "%s/%s"%(args.backupdir, args.prefix + repo.name + args.suffix)
 	config = "%s/%s"%(dir, "config" if args.mirror else ".git/config")
 
 	if not os.access(config, os.F_OK):
