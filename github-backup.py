@@ -23,6 +23,11 @@ def main():
 	# Make the connection to Github here.
 	config = { 'user': args.username }
 
+	args.backupdir = args.backupdir.rstrip("/")
+
+	if (args.token):
+		config['token'] = args.token
+
 	if (args.password):
 		config['password'] = args.password
 		config['login'] = args.username
@@ -30,7 +35,7 @@ def main():
 	gh = Github(**config)
 
 	# Get all of the given user's repos
-	user_repos = gh.repos.list().all()
+	user_repos = gh.repos.list(user=args.username).all()
 	for repo in user_repos:
 		repo.user = gh.users.get(repo.owner.login)
 		process_repo(repo, args)
@@ -50,6 +55,7 @@ def init_parser():
 	parser.add_argument("-g","--git", help="Pass extra arguments to git", default="", metavar="ARGS")
 	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
+	parser.add_argument("-t", "--token", help="OAuth token for authentification")
 
 	return parser
 
