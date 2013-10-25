@@ -73,9 +73,9 @@ def init_parser():
 	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
 	parser.add_argument("-P", "--prefix", help="Add prefix to repository directory names", default="")
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
-	parser.add_argument("-P","--prefix", help="Add prefix to repository directory names", default="")
+	parser.add_argument("-P", "--prefix", help="Add prefix to repository directory names", default="")
+	parser.add_argument("-t", "--token", help="Authenticate with Github API using OAuth token", default="")
 	parser.add_argument("-o", "--organization", help="Backup Organizational repositories", metavar="ORG")
-	parser.add_argument("-t","--token", help="Authenticate with Github API using OAuth token", default="")
 
 	return parser
 
