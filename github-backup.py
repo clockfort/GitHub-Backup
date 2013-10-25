@@ -24,6 +24,11 @@ def main():
 	# Make the connection to Github here.
 	config = { 'user': args.username }
 
+	args.backupdir = args.backupdir.rstrip("/")
+
+	if (args.token):
+		config['token'] = args.token
+
 	if (args.password):
 		config['password'] = args.password
 		config['login'] = args.username
@@ -57,6 +62,7 @@ def init_parser():
 	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
 	parser.add_argument("-P", "--prefix", help="Add prefix to repository directory names", default="")
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
+	parser.add_argument("-t", "--token", help="OAuth token for authentification")
 	parser.add_argument("-o", "--organization", help="Backup Organizational repositories", metavar="ORG")
 
 	return parser
