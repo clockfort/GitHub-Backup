@@ -23,6 +23,11 @@ def main():
 	# Make the connection to Github here.
 	config = { 'user': args.username }
 
+	args.backupdir = args.backupdir.rstrip("/")
+
+	if (args.token):
+		config['token'] = args.token
+
 	if (args.password):
 		config['password'] = args.password
 		config['login'] = args.username
@@ -39,7 +44,7 @@ def main():
 	if args.organization:
 		user_repos = gh.repos.list_by_org(args.organization).all()
 	else:
-		user_repos = gh.repos.list().all()
+		user_repos = gh.repos.list(user=args.username).all()
 
 	for repo in user_repos:
 		repo.user = gh.users.get(repo.owner.login)
