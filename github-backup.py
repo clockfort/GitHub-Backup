@@ -9,16 +9,19 @@ Created: Fri Jun 15 2012
 
 from pygithub3 import Github
 from argparse import ArgumentParser
+import subprocess
 import os
-
 
 def main():
 	parser = init_parser()
 	args = parser.parse_args()
 
+	if not args.git:
+		args.git = []
+
 	# Process args
 	if args.cron:
-		args.git += "--quiet"
+		args.git.append("--quiet")
 
 	# Make the connection to Github here.
 	config = { 'user': args.username }
@@ -62,10 +65,10 @@ def init_parser():
 
 	parser.add_argument("username", help="A Github username")
 	parser.add_argument("backupdir", help="The folder where you want your backups to go")
-	parser.add_argument("-c","--cron", help="Use this when running from a cron job", action="store_true")
-	parser.add_argument("-m","--mirror", help="Create a bare mirror", action="store_true")
-	parser.add_argument("-f","--skip-forks", help="Skip forks", action="store_true")
-	parser.add_argument("-g","--git", help="Pass extra arguments to git", default="", metavar="ARGS")
+	parser.add_argument("-c", "--cron", help="Use this when running from a cron job", action="store_true")
+	parser.add_argument("-m", "--mirror", help="Create a bare mirror", action="store_true")
+	parser.add_argument("-f", "--skip-forks", help="Skip forks", action="store_true")
+	parser.add_argument("-g", "--git", nargs="+", help="Pass extra arguments to git", default="", metavar="ARGS")
 	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
 	parser.add_argument("-P","--prefix", help="Add prefix to repository directory names", default="")
@@ -92,41 +95,42 @@ def process_repo(repo, args):
 
 
 def clone_repo(repo, dir, args):
+	url = repo.ssh_url if args.ssh else repo.git_url
+
 	if args.mirror:
-		options = args.git + " --mirror"
+		git("clone", ["--mirror", url, dir], args.git, dir)
 	else:
-		options = args.git
-
-	os.system('git clone %s %s %s'%(options, repo.ssh_url if args.ssh else repo.git_url, dir))
-
+		git("clone", [url, dir], args.git, dir)
 
 def update_repo(repo, dir, args):
-	savedPath = os.getcwd()
-	os.chdir(dir)
-
 	# GitHub => Local
 	# TODO: use subprocess package and fork git into background (major performance boost expected)
 	if args.mirror:
-		os.system("git fetch %s"%(args.git + " --prune",))
+		git("fetch", ["--prune"], args.git, dir)
 	else:
-		os.system("git pull %s"%(args.git,))
+		git("pull", gargs=args.git, gdir=dir)
 
 	# Fetch description and owner (useful for gitweb, cgit etc.)
-	# TODO: can we combine that in a single call to 'git config'
-	if repo.description is not None:
-		os.system("git config --local gitweb.description %s"%(shell_escape(repo.description),))
-	if repo.user.name is not None and repo.user.email is not None:
-		os.system("git config --local gitweb.owner %s"%(shell_escape("%s <%s>"%(repo.user.name, repo.user.email.encode("utf-8"))),))
+	if repo.description:
+		git("config", ["--local", "gitweb.description", repo.description], gdir=dir)
+	if repo.user.name and repo.user.email:
+		git("config", ["--local", "gitweb.owner", "%s <%s>" %(repo.user.name, repo.user.email.encode("utf-8"))], gdir=dir)
+	git("config", ["--local", "cgit.name", repo.name], gdir=dir)
+	git("config", ["--local", "cgit.defbranch", repo.default_branch], gdir=dir)
+	git("config", ["--local", "cgit.clone-url", repo.clone_url], gdir=dir)
 
-	os.system("git config --local cgit.name %s"%(shell_escape(repo.name),))
-	os.system("git config --local cgit.defbranch %s"%(shell_escape(repo.default_branch),))
-	os.system("git config --local cgit.clone-url %s"%(shell_escape(repo.clone_url),))
-      
-	os.chdir(savedPath)
 
-def shell_escape(str):
-	if str:
-		return "'" + unicode(str.replace("'", "'\\''")).encode("utf-8") + "'"
+def git(gcmd, args=[], gargs=[], gdir=""):
+	cmd = ["git"]
+	if gdir:
+		cmd.append("--git-dir")
+		cmd.append(gdir)
+	cmd.append(gcmd)
+	cmd.extend(gargs)
+	cmd.extend(args)
+
+	subprocess.call(cmd)
+>>>>>>> replaced os.system() by subprocess.call() and fixed escaping errors
 
 if __name__ == "__main__":
 	main()
