@@ -102,7 +102,7 @@ def update_repo(repo, dir, args):
 	os.system("git config --local gitweb.owner %s"%(shell_escape("%s <%s>"%(repo.user.name, repo.user.email.encode("utf-8"))),))
 
 	os.system("git config --local cgit.name %s"%(shell_escape(repo.name),))
-	os.system("git config --local cgit.defbranch %s"%(shell_escape(repo.master_branch),))
+	os.system("git config --local cgit.defbranch %s"%(shell_escape(repo.default_branch),))
 	os.system("git config --local cgit.clone-url %s"%(shell_escape(repo.clone_url),))
       
 	os.chdir(savedPath)
