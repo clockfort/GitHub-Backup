@@ -69,11 +69,12 @@ def init_parser():
 	parser.add_argument("-m", "--mirror", help="Create a bare mirror", action="store_true")
 	parser.add_argument("-f", "--skip-forks", help="Skip forks", action="store_true")
 	parser.add_argument("-g", "--git", nargs="+", help="Pass extra arguments to git", default="", metavar="ARGS")
+	parser.add_argument("-S", "--ssh", help="Use SSH protocol", action="store_true")
 	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
+	parser.add_argument("-P", "--prefix", help="Add prefix to repository directory names", default="")
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
 	parser.add_argument("-P","--prefix", help="Add prefix to repository directory names", default="")
-	parser.add_argument("-o","--organization", help="Backup Organizational repositories")
-	parser.add_argument("-S","--ssh", help="Use SSH protocol", action="store_true")
+	parser.add_argument("-o", "--organization", help="Backup Organizational repositories", metavar="ORG")
 	parser.add_argument("-t","--token", help="Authenticate with Github API using OAuth token", default="")
 
 	return parser
