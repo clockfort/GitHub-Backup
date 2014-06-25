@@ -12,12 +12,10 @@ from argparse import ArgumentParser
 import subprocess
 import os
 
+
 def main():
 	parser = init_parser()
 	args = parser.parse_args()
-
-	if not args.git:
-		args.git = []
 
 	# Process args
 	if args.cron:
@@ -26,11 +24,6 @@ def main():
 	# Make the connection to Github here.
 	config = { 'user': args.username }
 
-	args.backupdir = args.backupdir.rstrip("/")
-
-	if (args.token):
-		config['token'] = args.token
-
 	if (args.password):
 		config['password'] = args.password
 		config['login'] = args.username
@@ -38,7 +31,11 @@ def main():
 	gh = Github(**config)
 
 	# Get all of the given user's repos
-	user_repos = gh.repos.list(user=args.username).all()
+	if args.organization:
+		user_repos = gh.repos.list_by_org(args.organization).all()
+	else:
+		user_repos = gh.repos.list().all()
+
 	for repo in user_repos:
 		repo.user = gh.users.get(repo.owner.login)
 		process_repo(repo, args)
@@ -53,12 +50,14 @@ def init_parser():
 
 	parser.add_argument("username", help="A Github username")
 	parser.add_argument("backupdir", help="The folder where you want your backups to go")
-	parser.add_argument("-c", "--cron", help="Use this when running from a cron job", action="store_true")
-	parser.add_argument("-m", "--mirror", help="Create a bare mirror", action="store_true")
-	parser.add_argument("-g", "--git", nargs="+", help="Pass extra arguments to git", default="", metavar="ARGS")
+	parser.add_argument("-c","--cron", help="Use this when running from a cron job", action="store_true")
+	parser.add_argument("-m","--mirror", help="Create a bare mirror", action="store_true")
+	parser.add_argument("-g","--git", help="Pass extra arguments to git", default="", metavar="ARGS")
 	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
-	parser.add_argument("-t", "--token", help="OAuth token for authentification")
+	parser.add_argument("-P","--prefix", help="Add prefix to repository directory names", default="")
+	parser.add_argument("-o","--organization", help="Backup Organizational repositories")
+	parser.add_argument("-S","--ssh", help="Use SSH protocol", action="store_true")
 
 	return parser
 
@@ -66,7 +65,7 @@ def process_repo(repo, args):
 	if not args.cron:
 		print("Processing repo: %s"%(repo.full_name))
 
-	dir = "%s/%s"%(args.backupdir, repo.name + args.suffix)
+	dir = "%s/%s"%(args.backupdir, args.prefix + repo.name + args.suffix)
 	config = "%s/%s"%(dir, "config" if args.mirror else ".git/config")
 
 	if not os.access(config, os.F_OK):
@@ -80,9 +79,9 @@ def process_repo(repo, args):
 
 def clone_repo(repo, dir, args):
 	if args.mirror:
-		git("clone", ["--mirror", repo.git_url, dir], args.git, dir)
+		git("clone", ["--mirror", repo.ssh_url if args.ssh else repo.git_url, dir], args.git, dir)
 	else:
-		git("clone", [repo.git_url, dir], args.git, dir)
+		git("clone", [repo.repo.ssh_url if args.ssh else repo.git_url, dir], args.git, dir)
 
 
 def update_repo(repo, dir, args):
