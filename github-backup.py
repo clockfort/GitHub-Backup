@@ -91,17 +91,17 @@ def process_repo(repo, args):
 		clone_repo(repo, dir, args)
 	else:
 		if not args.cron: print("Repo already exists, let's try to update it instead")
-
-	update_repo(repo, dir, args)
+		update_repo(repo, dir, args)
 
 
 def clone_repo(repo, dir, args):
-	url = repo.ssh_url if args.ssh else repo.git_url
+	params = [repo.repo.ssh_url if args.ssh else repo.git_url, dir]
 
 	if args.mirror:
-		git("clone", ["--mirror", url, dir], args.git, dir)
-	else:
-		git("clone", [url, dir], args.git, dir)
+		params.insert(0, ["--mirror"])
+		
+	git("clone", params, args.git, dir)
+
 
 def update_repo(repo, dir, args):
 	# GitHub => Local
@@ -126,12 +126,12 @@ def git(gcmd, args=[], gargs=[], gdir=""):
 	if gdir:
 		cmd.append("--git-dir")
 		cmd.append(gdir)
+
 	cmd.append(gcmd)
 	cmd.extend(gargs)
 	cmd.extend(args)
 
 	subprocess.call(cmd)
->>>>>>> replaced os.system() by subprocess.call() and fixed escaping errors
 
 if __name__ == "__main__":
 	main()
