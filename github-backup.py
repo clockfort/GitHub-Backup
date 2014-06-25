@@ -97,7 +97,7 @@ def update_repo(repo, dir, args):
 	git("config", ["--local", "gitweb.description", repo.description], gdir=dir)
 	git("config", ["--local", "gitweb.owner", "%s <%s>"%(repo.user.name, repo.user.email.encode("utf-8"))], gdir=dir)
 	git("config", ["--local", "cgit.name", repo.name], gdir=dir)
-	git("config", ["--local", "cgit.defbranch", repo.master_branch], gdir=dir)
+	git("config", ["--local", "cgit.defbranch", repo.default_branch], gdir=dir)
 	git("config", ["--local", "cgit.clone-url", repo.clone_url], gdir=dir)
 
 
