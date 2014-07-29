@@ -27,6 +27,12 @@ def main():
 		config['password'] = args.password
 		config['login'] = args.username
 
+	# if both password and token are specified, the token will be
+	# used, according to pygithub3 sources
+	# however, the username isn't required when using a token
+	if (args.token):
+		config['token'] = args.token
+
 	gh = Github(**config)
 
 	# Get all of the given user's repos
@@ -57,6 +63,7 @@ def init_parser():
 	parser.add_argument("-P","--prefix", help="Add prefix to repository directory names", default="")
 	parser.add_argument("-o","--organization", help="Backup Organizational repositories")
 	parser.add_argument("-S","--ssh", help="Use SSH protocol", action="store_true")
+	parser.add_argument("-t","--token", help="Authenticate with Github API using OAuth token", default="")
 
 	return parser
 
