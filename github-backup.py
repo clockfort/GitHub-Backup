@@ -115,7 +115,8 @@ def update_repo(repo, dir, args):
 	os.chdir(savedPath)
 
 def shell_escape(str):
-	return "'" + unicode(str.replace("'", "\\'")).encode("utf-8") + "'"
+	if str:
+		return "'" + unicode(str.replace("'", "\\'")).encode("utf-8") + "'"
 
 if __name__ == "__main__":
 	main()
