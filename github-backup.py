@@ -106,7 +106,8 @@ def update_repo(repo, dir, args):
 	# Fetch description and owner (useful for gitweb, cgit etc.)
 	# TODO: can we combine that in a single call to 'git config'
 	os.system("git config --local gitweb.description %s"%(shell_escape(repo.description),))
-	os.system("git config --local gitweb.owner %s"%(shell_escape("%s <%s>"%(repo.user.name, repo.user.email.encode("utf-8"))),))
+	if repo.user.name is not None and repo.user.email is not None:
+		os.system("git config --local gitweb.owner %s"%(shell_escape("%s <%s>"%(repo.user.name, repo.user.email.encode("utf-8"))),))
 
 	os.system("git config --local cgit.name %s"%(shell_escape(repo.name),))
 	os.system("git config --local cgit.defbranch %s"%(shell_escape(repo.default_branch),))
