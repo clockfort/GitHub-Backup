@@ -105,7 +105,8 @@ def update_repo(repo, dir, args):
 
 	# Fetch description and owner (useful for gitweb, cgit etc.)
 	# TODO: can we combine that in a single call to 'git config'
-	os.system("git config --local gitweb.description %s"%(shell_escape(repo.description),))
+	if repo.description is not None:
+		os.system("git config --local gitweb.description %s"%(shell_escape(repo.description),))
 	if repo.user.name is not None and repo.user.email is not None:
 		os.system("git config --local gitweb.owner %s"%(shell_escape("%s <%s>"%(repo.user.name, repo.user.email.encode("utf-8"))),))
 
@@ -117,7 +118,7 @@ def update_repo(repo, dir, args):
 
 def shell_escape(str):
 	if str:
-		return "'" + unicode(str.replace("'", "\\'")).encode("utf-8") + "'"
+		return "'" + unicode(str.replace("'", "'\\''")).encode("utf-8") + "'"
 
 if __name__ == "__main__":
 	main()
