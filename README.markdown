@@ -35,6 +35,7 @@ optional arguments:
   -h, --help            show this help message and exit
   -c, --cron            Use this when running from a cron job
   -m, --mirror          Create a bare mirror
+  -f, --skip-forks      Skip forks
   -g ARGS, --git ARGS   Pass extra arguments to git
   -s SUFFIX, --suffix SUFFIX
                         Add suffix to repository directory names

@@ -43,7 +43,9 @@ def main():
 
 	for repo in user_repos:
 		repo.user = gh.users.get(repo.owner.login)
-		process_repo(repo, args)
+		fullrepo = gh.repos.get(repo.owner.login, repo.name)
+		if not (args.skip_forks and hasattr(fullrepo, 'parent') and hasattr(fullrepo, 'source')):
+			process_repo(repo, args)
 
 
 def init_parser():
@@ -57,6 +59,7 @@ def init_parser():
 	parser.add_argument("backupdir", help="The folder where you want your backups to go")
 	parser.add_argument("-c","--cron", help="Use this when running from a cron job", action="store_true")
 	parser.add_argument("-m","--mirror", help="Create a bare mirror", action="store_true")
+	parser.add_argument("-f","--skip-forks", help="Skip forks", action="store_true")
 	parser.add_argument("-g","--git", help="Pass extra arguments to git", default="", metavar="ARGS")
 	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
 	parser.add_argument("-p", "--password", help="Authenticate with Github API")
