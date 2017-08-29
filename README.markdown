@@ -22,7 +22,7 @@ Installation is simple with
 Usage
 -----
 ````
-usage: github-backup.py [-h] [-c] [-m] [-g ARGS] [-s SUFFIX]
+usage: github-backup.py [-h] [-c] [-m] [-f] [-g ARGS] [-o ORGANIZATION] [-p PASSWORD] [-P PREFIX] [-s SUFFIX] [-S] [-t TOKEN]
                         username backupdir
 
 makes a backup of all of a github user's repositories
@@ -32,13 +32,23 @@ positional arguments:
   backupdir             The folder where you want your backups to go
 
 optional arguments:
-  -h, --help            show this help message and exit
+  -h, --help            Show this help message and exit
   -c, --cron            Use this when running from a cron job
   -m, --mirror          Create a bare mirror
   -f, --skip-forks      Skip forks
   -g ARGS, --git ARGS   Pass extra arguments to git
+  -o ORGANIZATION, --organization ORGANIZATION
+                        Backup Organizational repositories
+  -p PASSWORD, --password PASSWORD   
+                        Authenticate with Github API
+  -P PREFIX, --prefix PREFIX   
+                        Add prefix to repository directory names
   -s SUFFIX, --suffix SUFFIX
                         Add suffix to repository directory names
+  -S, --ssh             Use SSH protocol
+  -t TOKEN, --token TOKEN 
+                        Authenticate with Github API using OAuth token	
+
 ````
 
 Then, put it in a cron job somewhere and forget about it for eternity.
