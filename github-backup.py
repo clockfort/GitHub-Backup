@@ -7,10 +7,12 @@ Authors: Anthony Gargiulo (anthony@agargiulo.com)
 Created: Fri Jun 15 2012
 """
 
+
 from pygithub3 import Github
 from argparse import ArgumentParser
 import subprocess
 import os
+
 
 def main():
     parser = init_parser()
@@ -24,7 +26,7 @@ def main():
         args.git.append("--quiet")
 
     # Make the connection to Github here.
-    config = { 'user': args.username }
+    config = {'user': args.username}
 
     args.backupdir = args.backupdir.rstrip("/")
 
@@ -44,14 +46,16 @@ def main():
     gh = Github(**config)
 
     # Get all repos
-    users = { }
+    users = {}
     user_repos = gh.repos.list(user=args.username).all()
     for repo in user_repos:
         if repo.owner.login not in users:
             users[repo.owner.login] = gh.users.get(repo.owner.login)
 
         repo.user = users[repo.owner.login]
-        if not (args.skip_forks and hasattr(fullrepo, 'parent') and hasattr(fullrepo, 'source')):
+        fullrepo = gh.repos.get(repo.owner.login, repo.name)
+        is_fork = hasattr(fullrepo, 'parent') and hasattr(fullrepo, 'source')
+        if not (args.skip_forks and is_fork):
             process_repo(repo, args)
 
 
@@ -77,9 +81,10 @@ def init_parser():
 
     return parser
 
+
 def process_repo(repo, args):
     if not args.cron:
-        print("Processing repo: %s"%(repo.full_name))
+        print("Processing repo: %s" % (repo.full_name))
 
     dir = "%s/%s" % (args.backupdir, repo.name + args.suffix)
     config = "%s/%s" % (dir, "config" if args.mirror else ".git/config")
@@ -105,7 +110,8 @@ def clone_repo(repo, dir, args):
 
 def update_repo(repo, dir, args):
     # GitHub => Local
-    # TODO: use subprocess package and fork git into background (major performance boost expected)
+    # TODO: use subprocess package and fork git into
+    #       background (major performance boost expected)
     if args.mirror:
         git("fetch", ["--prune"], args.git, dir)
     else:
@@ -113,12 +119,18 @@ def update_repo(repo, dir, args):
 
     # Fetch description and owner (useful for gitweb, cgit etc.)
     if repo.description:
-        git("config", ["--local", "gitweb.description", repo.description.encode("utf-8")], gdir=dir)
+        git("config", ["--local", "gitweb.description",
+            repo.description.encode("utf-8")], gdir=dir)
+
     if repo.user.name and repo.user.email:
-        git("config", ["--local", "gitweb.owner", "%s <%s>" % (repo.user.name.encode("utf-8"), repo.user.email.encode("utf-8"))], gdir=dir)
+        owner = "%s <%s>" % (repo.user.name.encode("utf-8"),
+                             repo.user.email.encode("utf-8"))
+        git("config", ["--local", "gitweb.owner", owner], gdir=dir)
+
     git("config", ["--local", "cgit.name", str(repo.name)], gdir=dir)
     git("config", ["--local", "cgit.defbranch", str(repo.default_branch)], gdir=dir)
     git("config", ["--local", "cgit.clone-url", str(repo.clone_url)], gdir=dir)
+
 
 def git(gcmd, args=[], gargs=[], gdir=""):
     cmd = ["git"]
