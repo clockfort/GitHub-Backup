@@ -65,10 +65,6 @@ def main():
 
         process_repo(repo, args)
 
-        import sys
-        sys.exit(0)
-
-
 def init_parser():
     """Set up the argument parser."""
 
