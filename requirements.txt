@@ -1,1 +1,1 @@
-pygithub3
+PyGitHub
