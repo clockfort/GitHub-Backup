@@ -7,121 +7,150 @@ Authors: Anthony Gargiulo (anthony@agargiulo.com)
 Created: Fri Jun 15 2012
 """
 
-from pygithub3 import Github
-from argparse import ArgumentParser
-import os
 
+from github import Github
+from argparse import ArgumentParser
+import subprocess
+import os, os.path
+import logging
+
+LOGGER = logging.getLogger('github-backup')
 
 def main():
-	parser = init_parser()
-	args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO)
 
-	# Process args
-	if args.cron:
-		args.git += "--quiet"
 
-	# Make the connection to Github here.
-	config = { 'user': args.username }
+    parser = init_parser()
+    args = parser.parse_args()
 
-	if (args.password):
-		config['password'] = args.password
-		config['login'] = args.username
+    if args.quiet:
+        LOGGER.setLevel(logging.WARN)
+    elif args.debug:
+        LOGGER.setLevel(logging.DEBUG)
 
-	# if both password and token are specified, the token will be
-	# used, according to pygithub3 sources
-	# however, the username isn't required when using a token
-	if (args.token):
-		config['token'] = args.token
+    # Process args
+    if args.quiet:
+        args.git.append("--quiet")
 
-	gh = Github(**config)
+    args.backupdir = args.backupdir.rstrip("/")
 
-	# Get all of the given user's repos
-	if args.organization:
-		user_repos = gh.repos.list_by_org(args.organization).all()
-	else:
-		user_repos = gh.repos.list().all()
+    # Make the connection to Github here.
+    config = {'login_or_token': args.login_or_token}
 
-	for repo in user_repos:
-		repo.user = gh.users.get(repo.owner.login)
-		fullrepo = gh.repos.get(repo.owner.login, repo.name)
-		if not (args.skip_forks and hasattr(fullrepo, 'parent') and hasattr(fullrepo, 'source')):
-			process_repo(repo, args)
+    if args.password:
+        config['password'] = args.password
 
+    gh = Github(**config)
+
+    # Check that backup dir exists
+    if not os.path.exists(args.backupdir):
+        os.mkdir(args.backupdir)
+
+    # Get all repos
+    filters = {
+        'affiliation': ','.join(args.affiliation),
+        'visibility': args.visibility
+    }
+
+    if args.organization:
+        org = gh.get_org(args.org)
+        repos = org.get_repos(**filters)
+    else:
+        user = gh.get_user()
+        repos = user.get_repos(**filters)
+
+    for repo in repos:
+        if args.skip_forks and repo.fork:
+            continue
+
+        process_repo(repo, args)
 
 def init_parser():
-	"""
-	set up the argument parser
-	"""
+    """Set up the argument parser."""
 
-	parser = ArgumentParser(description="makes a backup of all of a github user's repositories")
+    parser = ArgumentParser(description="makes a backup of all of a github user's repositories")
 
-	parser.add_argument("username", help="A Github username")
-	parser.add_argument("backupdir", help="The folder where you want your backups to go")
-	parser.add_argument("-c","--cron", help="Use this when running from a cron job", action="store_true")
-	parser.add_argument("-m","--mirror", help="Create a bare mirror", action="store_true")
-	parser.add_argument("-f","--skip-forks", help="Skip forks", action="store_true")
-	parser.add_argument("-g","--git", help="Pass extra arguments to git", default="", metavar="ARGS")
-	parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
-	parser.add_argument("-p", "--password", help="Authenticate with Github API")
-	parser.add_argument("-P","--prefix", help="Add prefix to repository directory names", default="")
-	parser.add_argument("-o","--organization", help="Backup Organizational repositories")
-	parser.add_argument("-S","--ssh", help="Use SSH protocol", action="store_true")
-	parser.add_argument("-t","--token", help="Authenticate with Github API using OAuth token", default="")
+    parser.add_argument("login_or_token", help="A Github username or token")
+    parser.add_argument("backupdir", help="The folder where you want your backups to go")
+    parser.add_argument("-v", "--visibility", help="Filter repos by their visibility", choices=['all', 'public', 'private'], default='all')
+    parser.add_argument("-a", "--affiliation", help="Filter repos by their affiliation", action='append', type=str, default=['owner'], choices=['owner', 'collaborator', 'organization_member'])
+    parser.add_argument("-d", "--debug", help="Show debug info", action="store_true")
+    parser.add_argument("-q", "--quiet", help="Only show errors", action="store_true")
+    parser.add_argument("-m", "--mirror", help="Create a bare mirror", action="store_true")
+    parser.add_argument("-f", "--skip-forks", help="Skip forks", action="store_true")
+    parser.add_argument("-g", "--git", nargs="+", help="Pass extra arguments to git", type=list, default=[], metavar="ARGS")
+    parser.add_argument("-t", "--type", help="Select the protocol for cloning", choices=['git', 'http', 'ssh'], default='ssh')
+    parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
+    parser.add_argument("-p", "--password", help="Authenticate with Github API")
+    parser.add_argument("-P", "--prefix", help="Add prefix to repository directory names", default="")
+    parser.add_argument("-o", "--organization", help="Backup Organizational repositories", metavar="ORG")
 
-	return parser
+    return parser
+
 
 def process_repo(repo, args):
-	if not args.cron:
-		print("Processing repo: %s"%(repo.full_name))
+    LOGGER.info("Processing repo: %s", repo.full_name)
 
-	dir = "%s/%s"%(args.backupdir, args.prefix + repo.name + args.suffix)
-	config = "%s/%s"%(dir, "config" if args.mirror else ".git/config")
+    dir = args.backupdir + '/' + args.prefix + repo.name + args.suffix
+    config = "%s/%s" % (dir, "config" if args.mirror else ".git/config")
 
-	if not os.access(config, os.F_OK):
-		if not args.cron: print("Repo doesn't exists, lets clone it")
-		clone_repo(repo, dir, args)
-	else:
-		if not args.cron: print("Repo already exists, let's try to update it instead")
-
-	update_repo(repo, dir, args)
+    if not os.access(config, os.F_OK):
+        LOGGER.info("Repo doesn't exists, lets clone it")
+        clone_repo(repo, dir, args)
+    else:
+        LOGGER.info("Repo already exists, let's try to update it instead")
+        update_repo(repo, dir, args)
 
 
 def clone_repo(repo, dir, args):
-	if args.mirror:
-		options = args.git + " --mirror"
-	else:
-		options = args.git
+    if args.type == 'http':
+        url = repo.clone_url
+    elif args.type == 'ssh':
+        url = repo.ssh_url
+    elif args.type == 'git':
+        url = repo.git_url
 
-	os.system('git clone %s %s %s'%(options, repo.ssh_url if args.ssh else repo.git_url, dir))
+    git_args = [url, os.path.basename(dir)]
+    if args.mirror:
+        git_args.insert(0, '--mirror')
+
+    git("clone", git_args, args.git, args.backupdir)
 
 
 def update_repo(repo, dir, args):
-	savedPath = os.getcwd()
-	os.chdir(dir)
+    # GitHub => Local
+    # TODO: use subprocess package and fork git into
+    #       background (major performance boost expected)
+    if args.mirror:
+        git("fetch", ["--prune"], args.git, dir)
+    else:
+        git("pull", gargs=args.git, gdir=dir)
 
-	# GitHub => Local
-	# TODO: use subprocess package and fork git into background (major performance boost expected)
-	if args.mirror:
-		os.system("git fetch %s"%(args.git + " --prune",))
-	else:
-		os.system("git pull %s"%(args.git,))
+    # Fetch description and owner (useful for gitweb, cgit etc.)
+    if repo.description:
+        git("config", ["--local", "gitweb.description",
+            repo.description.encode("utf-8")], gdir=dir)
 
-	# Fetch description and owner (useful for gitweb, cgit etc.)
-	# TODO: can we combine that in a single call to 'git config'
-	if repo.description is not None:
-		os.system("git config --local gitweb.description %s"%(shell_escape(repo.description),))
-	if repo.user.name is not None and repo.user.email is not None:
-		os.system("git config --local gitweb.owner %s"%(shell_escape("%s <%s>"%(repo.user.name, repo.user.email.encode("utf-8"))),))
+    if repo.owner.name and repo.owner.email:
+        owner = "%s <%s>" % (repo.owner.name.encode("utf-8"),
+                             repo.owner.email.encode("utf-8"))
+        git("config", ["--local", "gitweb.owner", owner], gdir=dir)
 
-	os.system("git config --local cgit.name %s"%(shell_escape(repo.name),))
-	os.system("git config --local cgit.defbranch %s"%(shell_escape(repo.default_branch),))
-	os.system("git config --local cgit.clone-url %s"%(shell_escape(repo.clone_url),))
-      
-	os.chdir(savedPath)
+    git("config", ["--local", "cgit.name", str(repo.name)], gdir=dir)
+    git("config", ["--local", "cgit.defbranch", str(repo.default_branch)], gdir=dir)
+    git("config", ["--local", "cgit.clone-url", str(repo.clone_url)], gdir=dir)
 
-def shell_escape(str):
-	if str:
-		return "'" + unicode(str.replace("'", "'\\''")).encode("utf-8") + "'"
+
+def git(gcmd, args=[], gargs=[], gdir=""):
+    cmd = ["git"]
+    if gdir:
+        cmd.extend(["-C", gdir])
+    cmd.append(gcmd)
+    cmd.extend(gargs)
+    cmd.extend(args)
+
+    print(cmd)
+    subprocess.call(cmd)
 
 if __name__ == "__main__":
-	main()
+    main()
