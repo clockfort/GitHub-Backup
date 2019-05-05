@@ -52,6 +52,23 @@ optional arguments:
 
 Then, put it in a cron job somewhere and forget about it for eternity.
 
+How To Back Up Entire GitHub Organisation Repos
+-------------------------
+
+1. Install Dependencies: `sudo pip install pygithub3]
+2. Clone this repo using [git clone https://github.com/clockfort/GitHub-Backup.git
+3. Just open the cloned repo folder and run the terminal:
+
+```
+./github-backup.py [Your GitHub Username] [Path To Saving Directory] -o [For Organisation]
+```
+
+Example:
+
+```
+./github-backup.py mohamed786 /home/mohamed786/githubbak -o LineageOS
+```
+
 Why This Software Exists
 -------------------------
 This software is useful in many cases:
