@@ -9,7 +9,7 @@ GitHub-Backup makes a local backup copy of all of a github user's (or github org
 Dependencies
 ----------------------------
 
-GitHub-Backup requires `pygithub3` a Python library for the GitHub API v3.
+GitHub-Backup requires the `PyGitHub` Python package for the GitHub API v3.
 
 Installation is simple with
 
