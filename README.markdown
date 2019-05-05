@@ -17,6 +17,7 @@ Installation is simple with
 
 Usage
 ----------------------------
+
 ````
 usage: github-backup.py [-h] [-c] [-m] [-f] [-S] [-g ARGS] [-o ORG] [-s SUFFIX] [-P PREFIX]
                         [-p PASSWORD] [-t TOKEN] username backupdir
@@ -74,13 +75,9 @@ Why This Software Exists
 This software is useful in many cases:
 
   - GitHub suddenly explodes.
-
   - GitHub goes out of business.
-
   - Your corporation's backup policies are more stringent than GitHub's.
-
   - You have spotty/no internet access - perhaps you'd like to have all of your repositories available to code on while you ride the train?
-
   - You are paranoid tinfoil-hat wearer who needs to back up everything in triplicate on a variety of outdated tape media.
 
 
