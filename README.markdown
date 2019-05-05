@@ -19,34 +19,39 @@ Usage
 ----------------------------
 
 ````
-usage: github-backup.py [-h] [-c] [-m] [-f] [-S] [-g ARGS] [-o ORG] [-s SUFFIX] [-P PREFIX]
-                        [-p PASSWORD] [-t TOKEN] username backupdir
+usage: github-backup.py [-h] [-v {all,public,private}]
+                        [-a {owner,collaborator,organization_member}] [-d]
+                        [-q] [-m] [-f] [-g ARGS [ARGS ...]]
+                        [-t {git,http,ssh}] [-s SUFFIX] [-p PASSWORD]
+                        [-P PREFIX] [-o ORG]
+                        login_or_token backupdir
 
 makes a backup of all of a github user's repositories
 
 positional arguments:
-  username              A Github username
+  login_or_token        A Github username or token
   backupdir             The folder where you want your backups to go
 
 optional arguments:
-  -h, --help            Show this help message and exit
-  -c, --cron            Use this when running from a cron job
+  -h, --help            show this help message and exit
+  -v {all,public,private}, --visibility {all,public,private}
+                        Filter repos by their visibility
+  -a {owner,collaborator,organization_member}, --affiliation {owner,collaborator,organization_member}
+                        Filter repos by their affiliation
+  -d, --debug           Show debug info
+  -q, --quiet           Only show errors
   -m, --mirror          Create a bare mirror
   -f, --skip-forks      Skip forks
-  -S, --ssh             Use SSH protocol
-  -g ARGS, --git ARGS   Pass extra arguments to git
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Backup Organizational repositories
-  -p PASSWORD, --password PASSWORD   
-                        Authenticate with Github API
-  -P PREFIX, --prefix PREFIX   
-                        Add prefix to repository directory names
+  -g ARGS [ARGS ...], --git ARGS [ARGS ...]
+                        Pass extra arguments to git
+  -t {git,http,ssh}, --type {git,http,ssh}
+                        Select the protocol for cloning
   -s SUFFIX, --suffix SUFFIX
                         Add suffix to repository directory names
   -p PASSWORD, --password PASSWORD
-                        Authenticate with Github API using OAuth token
-  -t TOKEN, --token TOKEN
-                        OAuth token for authentification
+                        Authenticate with Github API
+  -P PREFIX, --prefix PREFIX
+                        Add prefix to repository directory names
   -o ORG, --organization ORG
                         Backup Organizational repositories
 ````
