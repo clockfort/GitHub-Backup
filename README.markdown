@@ -13,7 +13,7 @@ GitHub-Backup requires `pygithub3` a Python library for the GitHub API v3.
 
 Installation is simple with
 
-	pip install pygithub3
+	pip install -r requirements.txt
 
 Usage
 ----------------------------
