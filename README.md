@@ -61,8 +61,8 @@ Then, put it in a cron job somewhere and forget about it for eternity.
 How To Back Up Entire GitHub Organisation Repos
 -------------------------
 
-1. Install Dependencies: `sudo pip install pygithub3]
-2. Clone this repo using [git clone https://github.com/clockfort/GitHub-Backup.git
+1. Install Dependencies: `sudo pip install pygithub3`
+2. Clone this repo using `$ git clone https://github.com/clockfort/GitHub-Backup.git`
 3. Just open the cloned repo folder and run the terminal:
 
 ```
