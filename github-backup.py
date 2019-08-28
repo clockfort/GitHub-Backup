@@ -8,7 +8,7 @@ Created: Fri Jun 15 2012
 """
 
 
-from github import Github
+from pygithub3 import Github
 from argparse import ArgumentParser
 import subprocess
 import os, os.path
