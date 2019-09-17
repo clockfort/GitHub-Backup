@@ -8,11 +8,11 @@ Created: Fri Jun 15 2012
 """
 
 
-from github import Github
 from argparse import ArgumentParser
 import subprocess
 import os, os.path
 import logging
+import github
 
 LOGGER = logging.getLogger('github-backup')
 
@@ -27,6 +27,7 @@ def main():
         LOGGER.setLevel(logging.WARN)
     elif args.debug:
         LOGGER.setLevel(logging.DEBUG)
+        github.enable_console_debug_logging()
 
     # Process args
     if args.quiet:
@@ -40,7 +41,7 @@ def main():
     if args.password:
         config['password'] = args.password
 
-    gh = Github(**config)
+    gh = github.Github(**config)
 
     # Check that backup dir exists
     if not os.path.exists(args.backupdir):
