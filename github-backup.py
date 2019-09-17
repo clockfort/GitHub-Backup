@@ -36,10 +36,13 @@ def main():
     args.backupdir = args.backupdir.rstrip("/")
 
     # Make the connection to Github here.
-    config = {'login_or_token': args.login_or_token}
-
+    config = {}
     if args.password:
+        config = {'login_or_token': args.login_or_token}
         config['password'] = args.password
+    else:
+        # unauthenticated users can only use http git method
+        args.type = 'http'
 
     gh = github.Github(**config)
 
@@ -54,11 +57,18 @@ def main():
     }
 
     if args.organization:
-        org = gh.get_org(args.org)
-        repos = org.get_repos(**filters)
+        if args.password:
+            account = gh.get_organization(args.org)
+        else:
+            filters = {}
+            account = gh.get_organization(args.login_or_token)
     else:
-        user = gh.get_user()
-        repos = user.get_repos(**filters)
+        if args.password:
+            account = gh.get_user()
+        else:
+            filters = {}
+            account = gh.get_user(args.login_or_token)
+    repos = account.get_repos(**filters)
 
     for repo in repos:
         if args.skip_forks and repo.fork:
