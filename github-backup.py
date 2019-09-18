@@ -46,6 +46,7 @@ def main():
         args.include_watched = True
         args.include_followers = True
         args.include_following = True
+        args.include_wiki = True
     if args.include_starred or args.include_watched or args.include_followers \
        or args.include_following:
         args.account = True
@@ -141,6 +142,10 @@ def init_parser():
                         action='store_true',
                         dest='include_following',
                         help='include JSON output of following users in backup')
+    parser.add_argument('--wikis',
+                        action='store_true',
+                        dest='include_wiki',
+                        help='include wiki clone in backup')
 
     return parser
 
@@ -217,6 +222,11 @@ def clone_repo(repo, dir, args):
     git_args = [url, os.path.basename(dir)]
     if args.mirror:
         git_args.insert(0, '--mirror')
+
+    if args.include_wiki and repo.has_wiki:
+        git_wiki_args = git_args.copy()
+        git_wiki_args[0] = url.replace('.git', '.wiki.git')
+        git("clone", git_wiki_args, args.git, os.path.join(os.path.dirname(dir), 'wiki'))
 
     git("clone", git_args, args.git, os.path.dirname(dir))
 
