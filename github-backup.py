@@ -16,7 +16,10 @@ import github
 
 LOGGER = logging.getLogger('github-backup')
 
+IsAuthorized = False
+
 def main():
+    global IsAuthorized
     logging.basicConfig(level=logging.INFO)
 
 
@@ -50,26 +53,28 @@ def main():
     if not os.path.exists(args.backupdir):
         os.mkdir(args.backupdir)
 
-    # Get all repos
-    filters = {
-        'affiliation': ','.join(args.affiliation),
-        'visibility': args.visibility
-    }
-
     if args.organization:
         if args.password:
             account = gh.get_organization(args.org)
         else:
-            filters = {}
             account = gh.get_organization(args.login_or_token)
     else:
         if args.password:
-            account = gh.get_user()
+            account = gh.get_user(args.username)
         else:
-            filters = {}
-            account = gh.get_user(args.login_or_token)
-    repos = account.get_repos(**filters)
+            account = gh.get_user(args.username or args.login_or_token)
 
+    IsAuthorized = isinstance(account, github.AuthenticatedUser.AuthenticatedUser)
+
+    filters = {}
+    if IsAuthorized:
+        # Get all repos
+        filters = {
+            'affiliation': ','.join(args.affiliation),
+            'visibility': args.visibility
+        }
+
+    repos = account.get_repos(**filters)
     for repo in repos:
         if args.skip_forks and repo.fork:
             continue
@@ -81,7 +86,7 @@ def init_parser():
 
     parser = ArgumentParser(description="makes a backup of all of a github user's repositories")
 
-    parser.add_argument("login_or_token", help="A Github username or token")
+    parser.add_argument("login_or_token", help="A Github username or token for authenticating")
     parser.add_argument("backupdir", help="The folder where you want your backups to go")
     parser.add_argument("-v", "--visibility", help="Filter repos by their visibility", choices=['all', 'public', 'private'], default='all')
     parser.add_argument("-a", "--affiliation", help="Filter repos by their affiliation", action='append', type=str, default=['owner'], choices=['owner', 'collaborator', 'organization_member'])
@@ -92,6 +97,7 @@ def init_parser():
     parser.add_argument("-g", "--git", nargs="+", help="Pass extra arguments to git", type=list, default=[], metavar="ARGS")
     parser.add_argument("-t", "--type", help="Select the protocol for cloning", choices=['git', 'http', 'ssh'], default='ssh')
     parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
+    parser.add_argument("-u", "--username", help="Backup USER account", metavar="USER")
     parser.add_argument("-p", "--password", help="Authenticate with Github API")
     parser.add_argument("-P", "--prefix", help="Add prefix to repository directory names", default="")
     parser.add_argument("-o", "--organization", help="Backup Organizational repositories", metavar="ORG")
@@ -112,9 +118,15 @@ def process_repo(repo, args):
         LOGGER.info("Repo already exists, let's try to update it instead")
         update_repo(repo, dir, args)
 
+    if isinstance(repo, github.Gist.Gist):
+        # Save extra gist info
+        gist_file = os.path.join(os.path.dirname(dir), repo.id+'.json')
+        with codecs.open(gist_file, 'w', encoding='utf-8') as f:
+            json_dump(repo.raw_data, f)
+
 
 def clone_repo(repo, dir, args):
-    if args.type == 'http':
+    if args.type == 'http' or not IsAuthorized:
         url = repo.clone_url
     elif args.type == 'ssh':
         url = repo.ssh_url
