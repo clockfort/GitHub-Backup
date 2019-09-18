@@ -187,9 +187,11 @@ def process_account(gh, account, args):
 def process_repo(repo, args):
     LOGGER.info("Processing repo: %s", repo.full_name)
 
-    dir = args.backupdir + '/' + args.prefix + repo.name + args.suffix
-    config = "%s/%s" % (dir, "config" if args.mirror else ".git/config")
+    dir = os.path.join(args.backupdir, 'repositories', args.prefix + repo.name + args.suffix, 'repository')
+    config = os.path.join(dir, "config" if args.mirror else ".git/config")
 
+    if not os.access(os.path.dirname(dir), os.F_OK):
+        mkdir_p(os.path.dirname(dir))
     if not os.access(config, os.F_OK):
         LOGGER.info("Repo doesn't exists, lets clone it")
         clone_repo(repo, dir, args)
@@ -216,7 +218,7 @@ def clone_repo(repo, dir, args):
     if args.mirror:
         git_args.insert(0, '--mirror')
 
-    git("clone", git_args, args.git, args.backupdir)
+    git("clone", git_args, args.git, os.path.dirname(dir))
 
 
 def update_repo(repo, dir, args):
