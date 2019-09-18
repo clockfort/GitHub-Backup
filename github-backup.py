@@ -8,10 +8,15 @@ Created: Fri Jun 15 2012
 """
 
 
-from argparse import ArgumentParser
+import os
+import errno
+import codecs
+import json
 import subprocess
-import os, os.path
 import logging
+from argparse import ArgumentParser
+
+import requests
 import github
 
 LOGGER = logging.getLogger('github-backup')
@@ -35,6 +40,15 @@ def main():
     # Process args
     if args.quiet:
         args.git.append("--quiet")
+    if args.include_everything:
+        args.account = True
+        args.include_starred = True
+        args.include_watched = True
+        args.include_followers = True
+        args.include_following = True
+    if args.include_starred or args.include_watched or args.include_followers \
+       or args.include_following:
+        args.account = True
 
     args.backupdir = args.backupdir.rstrip("/")
 
@@ -51,7 +65,7 @@ def main():
 
     # Check that backup dir exists
     if not os.path.exists(args.backupdir):
-        os.mkdir(args.backupdir)
+        mkdir_p(args.backupdir)
 
     if args.organization:
         if args.password:
@@ -74,6 +88,9 @@ def main():
             'visibility': args.visibility
         }
 
+    if args.account:
+        process_account(gh, account, args)
+
     repos = account.get_repos(**filters)
     for repo in repos:
         if args.skip_forks and repo.fork:
@@ -84,7 +101,7 @@ def main():
 def init_parser():
     """Set up the argument parser."""
 
-    parser = ArgumentParser(description="makes a backup of all of a github user's repositories")
+    parser = ArgumentParser(description="makes a backup of a github user's account")
 
     parser.add_argument("login_or_token", help="A Github username or token for authenticating")
     parser.add_argument("backupdir", help="The folder where you want your backups to go")
@@ -101,8 +118,68 @@ def init_parser():
     parser.add_argument("-p", "--password", help="Authenticate with Github API")
     parser.add_argument("-P", "--prefix", help="Add prefix to repository directory names", default="")
     parser.add_argument("-o", "--organization", help="Backup Organizational repositories", metavar="ORG")
+    parser.add_argument("-A", "--account", help="Backup account data", action='store_true')
+    parser.add_argument('--all',
+                        action='store_true',
+                        dest='include_everything',
+                        help='include everything in backup (not including [*])')
+    parser.add_argument('--starred',
+                        action='store_true',
+                        dest='include_starred',
+                        help='include JSON output of starred repositories in backup')
+    parser.add_argument('--watched',
+                        action='store_true',
+                        dest='include_watched',
+                        help='include JSON output of watched repositories in backup')
+    parser.add_argument('--followers',
+                        action='store_true',
+                        dest='include_followers',
+                        help='include JSON output of followers in backup')
+    parser.add_argument('--following',
+                        action='store_true',
+                        dest='include_following',
+                        help='include JSON output of following users in backup')
 
     return parser
+
+def fetch_url(url, outfile):
+    headers = {
+        "User-Agent": "PyGithub/Python"
+    }
+    with open(outfile, 'w') as f:
+        f.write(requests.get(url, headers=headers).content)
+
+def process_account(gh, account, args):
+    LOGGER.info("Processing account: %s", account.login)
+
+    dir = os.path.join(args.backupdir, 'account')
+    if not os.access(dir, os.F_OK):
+        mkdir_p(dir)
+
+    account_file = os.path.join(dir, 'account.json')
+    with codecs.open(account_file, 'w', encoding='utf-8') as f:
+        json_dump(account.raw_data, f)
+
+    if IsAuthorized:
+        emails_file = os.path.join(dir, 'emails.json')
+        with codecs.open(emails_file, 'w', encoding='utf-8') as f:
+            json_dump(list(account.get_emails()), f)
+
+    if args.include_starred:
+        LOGGER.debug("    Getting starred repository list")
+        fetch_url(account.starred_url, os.path.join(dir, 'starred.json'))
+
+    if args.include_watched:
+        LOGGER.debug("    Getting watched repository list")
+        fetch_url(account.subscriptions_url, os.path.join(dir, 'watched.json'))
+
+    if args.include_followers:
+        LOGGER.debug("    Getting followers repository list")
+        fetch_url(account.followers_url, os.path.join(dir, 'followers.json'))
+
+    if args.include_following:
+        LOGGER.debug("    Getting following repository list")
+        fetch_url(account.following_url, os.path.join(dir, 'following.json'))
 
 
 def process_repo(repo, args):
@@ -174,6 +251,27 @@ def git(gcmd, args=[], gargs=[], gdir=""):
 
     print(cmd)
     subprocess.call(cmd)
+
+def json_dump(data, output_file):
+    json.dump(data,
+              output_file,
+              ensure_ascii=False,
+              sort_keys=True,
+              indent=4,
+              separators=(',', ': '))
+
+def mkdir_p(path):
+    head, tail = os.path.split(path)
+    if head and not os.access(head, os.F_OK):
+        mkdir_p(head)
+
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
 if __name__ == "__main__":
     main()
