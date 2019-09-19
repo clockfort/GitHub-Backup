@@ -98,7 +98,7 @@ def main():
             if args.skip_forks and repo.fork:
                 continue
 
-            process_repo(repo, args)
+            RepositoryBackup(repo, args).backup()
 
 def init_parser():
     """Set up the argument parser."""
@@ -189,70 +189,81 @@ def process_account(gh, account, args):
         fetch_url(account.following_url, os.path.join(dir, 'following.json'))
 
 
-def process_repo(repo, args):
-    LOGGER.info("Processing repo: %s", repo.full_name)
+class RepositoryBackup(object):
+    def __init__(self, repo, args):
+        self.repo = repo
+        self.args = args
 
-    dir = os.path.join(args.backupdir, 'repositories', args.prefix + repo.name + args.suffix, 'repository')
-    config = os.path.join(dir, "config" if args.mirror else ".git/config")
+        dir = os.path.join(args.backupdir, 'repositories', args.prefix + repo.name + args.suffix, 'repository')
+        self.dir = dir
 
-    if not os.access(os.path.dirname(dir), os.F_OK):
-        mkdir_p(os.path.dirname(dir))
-    if not os.access(config, os.F_OK):
-        LOGGER.info("Repo doesn't exists, lets clone it")
-        clone_repo(repo, dir, args)
-    else:
-        LOGGER.info("Repo already exists, let's try to update it instead")
-        update_repo(repo, dir, args)
+        if args.type == 'http' or not IsAuthorized:
+            url = repo.clone_url
+        elif args.type == 'ssh':
+            url = repo.ssh_url
+        elif args.type == 'git':
+            url = repo.git_url
+        self.url = url
 
-    if isinstance(repo, github.Gist.Gist):
-        # Save extra gist info
-        gist_file = os.path.join(os.path.dirname(dir), repo.id+'.json')
-        with codecs.open(gist_file, 'w', encoding='utf-8') as f:
-            json_dump(repo.raw_data, f)
+        self.wiki_url = None
+        if args.include_wiki and repo.has_wiki:
+            self.wiki_url = self.url.replace('.git', '.wiki.git')
+            self.wiki_dir = os.path.join(args.backupdir, 'repositories', args.prefix + repo.name + args.suffix, 'wiki')
 
+    def backup(self):
+        LOGGER.info("Processing repo: %s", self.repo.full_name)
 
-def clone_repo(repo, dir, args):
-    if args.type == 'http' or not IsAuthorized:
-        url = repo.clone_url
-    elif args.type == 'ssh':
-        url = repo.ssh_url
-    elif args.type == 'git':
-        url = repo.git_url
+        config = os.path.join(self.dir, "config" if self.args.mirror else ".git/config")
+        if not os.access(os.path.dirname(self.dir), os.F_OK):
+            mkdir_p(os.path.dirname(self.dir))
+        if not os.access(config, os.F_OK):
+            LOGGER.info("Repo doesn't exists, lets clone it")
+            self.clone_repo(self.url, self.dir)
+        else:
+            LOGGER.info("Repo already exists, let's try to update it instead")
+            self.update_repo(self.dir)
 
-    git_args = [url, os.path.basename(dir)]
-    if args.mirror:
-        git_args.insert(0, '--mirror')
+        if self.wiki_url:
+            config = os.path.join(self.wiki_dir, "config" if self.args.mirror else ".git/config")
+            if not os.access(os.path.dirname(self.wiki_dir), os.F_OK):
+                mkdir_p(os.path.dirname(self.wiki_dir))
+            if not os.access(config, os.F_OK):
+                LOGGER.info("Wiki repo doesn't exists, lets clone it")
+                self.clone_repo(self.wiki_url, self.wiki_dir)
+            else:
+                LOGGER.info("Wiki repo already exists, let's try to update it instead")
+                self.update_repo(self.wiki_dir)
 
-    if args.include_wiki and repo.has_wiki:
-        git_wiki_args = git_args.copy()
-        git_wiki_args[0] = url.replace('.git', '.wiki.git')
-        git("clone", git_wiki_args, args.git, os.path.join(os.path.dirname(dir), 'wiki'))
+    def clone_repo(self, url, dir):
+        git_args = [url, os.path.basename(dir)]
+        if self.args.mirror:
+            git_args.insert(0, '--mirror')
 
-    git("clone", git_args, args.git, os.path.dirname(dir))
+        git("clone", git_args, self.args.git, os.path.dirname(dir))
 
+    def update_repo(self, dir):
+        # GitHub => Local
+        # TODO: use subprocess package and fork git into
+        #       background (major performance boost expected)
+        args, repo = self.args, self.repo
+        if args.mirror:
+            git("fetch", ["--prune"], args.git, dir)
+        else:
+            git("pull", gargs=args.git, gdir=dir)
 
-def update_repo(repo, dir, args):
-    # GitHub => Local
-    # TODO: use subprocess package and fork git into
-    #       background (major performance boost expected)
-    if args.mirror:
-        git("fetch", ["--prune"], args.git, dir)
-    else:
-        git("pull", gargs=args.git, gdir=dir)
+        # Fetch description and owner (useful for gitweb, cgit etc.)
+        if repo.description:
+            git("config", ["--local", "gitweb.description",
+                repo.description.encode("utf-8")], gdir=dir)
 
-    # Fetch description and owner (useful for gitweb, cgit etc.)
-    if repo.description:
-        git("config", ["--local", "gitweb.description",
-            repo.description.encode("utf-8")], gdir=dir)
+        if repo.owner.name and repo.owner.email:
+            owner = "%s <%s>" % (repo.owner.name.encode("utf-8"),
+                                 repo.owner.email.encode("utf-8"))
+            git("config", ["--local", "gitweb.owner", owner], gdir=dir)
 
-    if repo.owner.name and repo.owner.email:
-        owner = "%s <%s>" % (repo.owner.name.encode("utf-8"),
-                             repo.owner.email.encode("utf-8"))
-        git("config", ["--local", "gitweb.owner", owner], gdir=dir)
-
-    git("config", ["--local", "cgit.name", str(repo.name)], gdir=dir)
-    git("config", ["--local", "cgit.defbranch", str(repo.default_branch)], gdir=dir)
-    git("config", ["--local", "cgit.clone-url", str(repo.clone_url)], gdir=dir)
+        git("config", ["--local", "cgit.name", str(repo.name)], gdir=dir)
+        git("config", ["--local", "cgit.defbranch", str(repo.default_branch)], gdir=dir)
+        git("config", ["--local", "cgit.clone-url", str(repo.clone_url)], gdir=dir)
 
 
 def git(gcmd, args=[], gargs=[], gdir=""):
