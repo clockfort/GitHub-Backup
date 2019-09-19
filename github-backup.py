@@ -92,6 +92,14 @@ def main():
     if args.account:
         process_account(gh, account, args)
 
+    if args.include_gists:
+        for gist in account.get_gists():
+            RepositoryBackup(gist, args).backup()
+
+    if args.include_starred_gists and hasattr(account, 'get_starred_gists'):
+        for gist in account.get_starred_gists():
+            RepositoryBackup(gist, args).backup()
+
     if not args.skip_repos:
         repos = account.get_repos(**filters)
         for repo in repos:
@@ -146,6 +154,14 @@ def init_parser():
                         action='store_true',
                         dest='include_wiki',
                         help='include wiki clone in backup')
+    parser.add_argument('--gists',
+                        action='store_true',
+                        dest='include_gists',
+                        help='include gists in backup [*]')
+    parser.add_argument('--starred-gists',
+                        action='store_true',
+                        dest='include_starred_gists',
+                        help='include starred gists in backup [*]')
 
     return parser
 
@@ -194,10 +210,17 @@ class RepositoryBackup(object):
         self.repo = repo
         self.args = args
 
-        dir = os.path.join(args.backupdir, 'repositories', args.prefix + repo.name + args.suffix, 'repository')
+        self.is_gist = isinstance(repo, github.Gist.Gist)
+
+        if self.is_gist:
+            dir = os.path.join(args.backupdir, 'gists', repo.id)
+        else:
+            dir = os.path.join(args.backupdir, 'repositories', args.prefix + repo.name + args.suffix, 'repository')
         self.dir = dir
 
-        if args.type == 'http' or not IsAuthorized:
+        if self.is_gist:
+            url = repo.git_pull_url
+        elif args.type == 'http' or not IsAuthorized:
             url = repo.clone_url
         elif args.type == 'ssh':
             url = repo.ssh_url
@@ -211,7 +234,10 @@ class RepositoryBackup(object):
             self.wiki_dir = os.path.join(args.backupdir, 'repositories', args.prefix + repo.name + args.suffix, 'wiki')
 
     def backup(self):
-        LOGGER.info("Processing repo: %s", self.repo.full_name)
+        if self.is_gist:
+            LOGGER.info("Processing gist: %s", self.repo.id)
+        else:
+            LOGGER.info("Processing repo: %s", self.repo.full_name)
 
         config = os.path.join(self.dir, "config" if self.args.mirror else ".git/config")
         if not os.access(os.path.dirname(self.dir), os.F_OK):
@@ -233,6 +259,12 @@ class RepositoryBackup(object):
             else:
                 LOGGER.info("Wiki repo already exists, let's try to update it instead")
                 self.update_repo(self.wiki_dir)
+
+        if self.is_gist:
+            # Save extra gist info
+            gist_file = os.path.join(os.path.dirname(self.dir), self.repo.id+'.json')
+            with codecs.open(gist_file, 'w', encoding='utf-8') as f:
+                json_dump(self.repo.raw_data, f)
 
     def clone_repo(self, url, dir):
         git_args = [url, os.path.basename(dir)]
@@ -261,9 +293,13 @@ class RepositoryBackup(object):
                                  repo.owner.email.encode("utf-8"))
             git("config", ["--local", "gitweb.owner", owner], gdir=dir)
 
-        git("config", ["--local", "cgit.name", str(repo.name)], gdir=dir)
-        git("config", ["--local", "cgit.defbranch", str(repo.default_branch)], gdir=dir)
-        git("config", ["--local", "cgit.clone-url", str(repo.clone_url)], gdir=dir)
+        if self.is_gist:
+            git("config", ["--local", "cgit.name", str(repo.id)], gdir=dir)
+            git("config", ["--local", "cgit.clone-url", str(repo.git_pull_url)], gdir=dir)
+        else:
+            git("config", ["--local", "cgit.name", str(repo.name)], gdir=dir)
+            git("config", ["--local", "cgit.defbranch", str(repo.default_branch)], gdir=dir)
+            git("config", ["--local", "cgit.clone-url", str(repo.clone_url)], gdir=dir)
 
 
 def git(gcmd, args=[], gargs=[], gdir=""):
