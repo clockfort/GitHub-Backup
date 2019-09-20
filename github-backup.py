@@ -46,6 +46,8 @@ def main():
         args.include_watched = True
         args.include_followers = True
         args.include_following = True
+        args.include_releases = True
+        args.include_assets = True
         args.include_wiki = True
     if args.include_starred or args.include_watched or args.include_followers \
        or args.include_following:
@@ -162,6 +164,15 @@ def init_parser():
                         action='store_true',
                         dest='include_starred_gists',
                         help='include starred gists in backup [*]')
+    parser.add_argument('--releases',
+                        action='store_true',
+                        dest='include_releases',
+                        help='include release information, not including assets or binaries'
+                        )
+    parser.add_argument('--assets',
+                        action='store_true',
+                        dest='include_assets',
+                        help='include assets alongside release information; only applies if including releases')
 
     return parser
 
@@ -265,6 +276,9 @@ class RepositoryBackup(object):
             gist_file = os.path.join(os.path.dirname(self.dir), self.repo.id+'.json')
             with codecs.open(gist_file, 'w', encoding='utf-8') as f:
                 json_dump(self.repo.raw_data, f)
+        else:
+            if self.args.include_releases:
+                self._backup_releases()
 
     def clone_repo(self, url, dir):
         git_args = [url, os.path.basename(dir)]
@@ -300,6 +314,24 @@ class RepositoryBackup(object):
             git("config", ["--local", "cgit.name", str(repo.name)], gdir=dir)
             git("config", ["--local", "cgit.defbranch", str(repo.default_branch)], gdir=dir)
             git("config", ["--local", "cgit.clone-url", str(repo.clone_url)], gdir=dir)
+
+    def _backup_releases(self):
+        for release in self.repo.get_releases():
+            rel_dir = os.path.join(os.path.dirname(self.dir), 'releases')
+            rel_file = os.path.join(rel_dir, release.tag_name+'.json')
+            if not os.access(rel_dir, os.F_OK):
+                mkdir_p(rel_dir)
+            with codecs.open(rel_file, 'w', encoding='utf-8') as f:
+                json_dump(release.raw_data, f)
+
+            if self.args.include_assets:
+                for asset in release.get_assets():
+                    asset_dir = os.path.join(rel_dir, release.tag_name)
+                    asset_file = os.path.join(asset_dir, asset.name)
+                    if not os.access(asset_dir, os.F_OK):
+                        mkdir_p(asset_dir)
+                    fetch_url(asset.browser_download_url, asset_file)
+                    assert asset.size == os.path.getsize(asset_file)
 
 
 def git(gcmd, args=[], gargs=[], gdir=""):
