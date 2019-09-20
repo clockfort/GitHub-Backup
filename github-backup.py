@@ -46,6 +46,12 @@ def main():
         args.include_watched = True
         args.include_followers = True
         args.include_following = True
+        args.include_issues = True
+        args.include_issue_comments = True
+        args.include_issue_events = True
+        args.include_pulls = True
+        args.include_pull_comments = True
+        args.include_pull_commits = True
         args.include_releases = True
         args.include_assets = True
         args.include_wiki = True
@@ -152,6 +158,30 @@ def init_parser():
                         action='store_true',
                         dest='include_following',
                         help='include JSON output of following users in backup')
+    parser.add_argument('--issues',
+                        action='store_true',
+                        dest='include_issues',
+                        help='include issues in backup')
+    parser.add_argument('--issue-comments',
+                        action='store_true',
+                        dest='include_issue_comments',
+                        help='include issue comments in backup')
+    parser.add_argument('--issue-events',
+                        action='store_true',
+                        dest='include_issue_events',
+                        help='include issue events in backup')
+    parser.add_argument('--pulls',
+                        action='store_true',
+                        dest='include_pulls',
+                        help='include pull requests in backup')
+    parser.add_argument('--pull-comments',
+                        action='store_true',
+                        dest='include_pull_comments',
+                        help='include pull request review comments in backup')
+    parser.add_argument('--pull-commits',
+                        action='store_true',
+                        dest='include_pull_commits',
+                        help='include pull request commits in backup')
     parser.add_argument('--wikis',
                         action='store_true',
                         dest='include_wiki',
@@ -214,6 +244,24 @@ def process_account(gh, account, args):
     if args.include_following:
         LOGGER.debug("    Getting following repository list")
         fetch_url(account.following_url, os.path.join(dir, 'following.json'))
+
+    if args.include_issues:
+        LOGGER.debug("    Getting issues for user %s", account.login)
+        if IsAuthorized:
+            issues = account.get_issues()
+        else:
+            issues = gh.search_issues('', author=account.login, type='issue')
+
+        RepositoryBackup._backup_issues(issues, args, dir)
+
+    if args.include_pulls:
+        LOGGER.debug("    Getting pull requests for user %s", account.login)
+        if IsAuthorized:
+            issues = account.get_issues()
+        else:
+            issues = gh.search_issues('', author=account.login, type='pr')
+
+        RepositoryBackup._backup_pulls(issues, args, dir)
 
 
 class RepositoryBackup(object):
@@ -280,6 +328,14 @@ class RepositoryBackup(object):
             if self.args.include_releases:
                 self._backup_releases()
 
+            if self.args.include_issues:
+                LOGGER.debug("    Getting issues for repo %s", self.repo.name)
+                self._backup_issues(self.repo.get_issues(), self.args, os.path.dirname(self.dir))
+
+            if self.args.include_pulls:
+                LOGGER.debug("    Getting pull requests for repo %s", self.repo.name)
+                self._backup_pulls(self.repo.get_pulls(), self.args, os.path.dirname(self.dir))
+
     def clone_repo(self, url, dir):
         git_args = [url, os.path.basename(dir)]
         if self.args.mirror:
@@ -314,6 +370,46 @@ class RepositoryBackup(object):
             git("config", ["--local", "cgit.name", str(repo.name)], gdir=dir)
             git("config", ["--local", "cgit.defbranch", str(repo.default_branch)], gdir=dir)
             git("config", ["--local", "cgit.clone-url", str(repo.clone_url)], gdir=dir)
+
+    @classmethod
+    def _backup_issues(cls, issues, args, dir):
+        for issue in issues:
+            issue_data = issue.raw_data.copy()
+            LOGGER.debug("     * %s", issue.number)
+            if args.include_issue_comments and issue.comments:
+                for comment in issue.get_comments():
+                    issue_data.setdefault('comment_data', []).append(comment.raw_data)
+            if args.include_issue_events:
+                for event in issue.get_events():
+                    issue_data.setdefault('event_data', []).append(event.raw_data)
+
+            project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
+            issue_file = os.path.join(dir, 'issues', "{0}:{1}.json".format(project, issue.number))
+            if not os.access(os.path.dirname(issue_file), os.F_OK):
+                mkdir_p(os.path.dirname(issue_file))
+            with codecs.open(issue_file, 'w', encoding='utf-8') as f:
+                json_dump(issue_data, f)
+
+    @classmethod
+    def _backup_pulls(cls, issues, args, dir):
+        for issue in issues:
+            if isinstance(issue, github.Issue.Issue):
+                issue = issue.as_pull_request()
+            issue_data = issue.raw_data.copy()
+            LOGGER.debug("     * %s", issue.number)
+            if args.include_pull_comments and issue.comments:
+                for comment in issue.get_comments():
+                    issue_data.setdefault('comment_data', []).append(comment.raw_data)
+            if args.include_pull_commits and issue.commits:
+                for commit in issue.get_commits():
+                    issue_data.setdefault('commit_data', []).append(commit.raw_data)
+
+            project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
+            issue_file = os.path.join(dir, 'pull-requests', "{0}:{1}.json".format(project, issue.number))
+            if not os.access(os.path.dirname(issue_file), os.F_OK):
+                mkdir_p(os.path.dirname(issue_file))
+            with codecs.open(issue_file, 'w', encoding='utf-8') as f:
+                json_dump(issue_data, f)
 
     def _backup_releases(self):
         for release in self.repo.get_releases():
