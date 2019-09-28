@@ -15,6 +15,11 @@ import json
 import itertools
 import subprocess
 import logging
+import getpass
+try: #PY3
+    from configparser import SafeConfigParser as ConfigParser
+except ImportError:
+    from ConfigParser import SafeConfigParser as ConfigParser
 from argparse import ArgumentParser
 
 import requests
@@ -23,6 +28,7 @@ import github
 LOGGER = logging.getLogger('github-backup')
 
 IsAuthorized = False
+CONFFILE = os.path.join(os.getenv('HOME'), '.github-backup.conf')
 
 def main():
     global IsAuthorized
@@ -64,13 +70,29 @@ def main():
 
     # Make the connection to Github here.
     config = {}
-    if args.password:
-        config = {'login_or_token': args.login_or_token}
-        config['password'] = args.password
-    else:
+    if args.password == False:
+        # no password option given, continue unauthenticated
         # unauthenticated users can only use http git method
         args.type = 'http'
+    elif args.password == None:
+        # password option given, but no password value given
+        config = {'login_or_token': args.login_or_token}
+        if os.path.isfile(CONFFILE):
+            cfg = ConfigParser()
+            cfg.read(CONFFILE)
+            try:
+                config['password'] = cfg.get('github-backup', 'APITOKEN')
+            except:
+                config['password'] = cfg.get('github-backup', 'PASSWORD')
+        else:
+            password = getpass.getpass('Enter password for {}: '.format(config['login_or_token']))
+            if password:
+                config['password'] = password
+    else:
+        config = {'login_or_token': args.login_or_token}
+        config['password'] = args.password
 
+    LOGGER.debug("Github config: %r", config)
     gh = github.Github(**config)
 
     # Check that backup dir exists
@@ -83,12 +105,15 @@ def main():
         else:
             account = gh.get_organization(args.login_or_token)
     else:
-        if args.password:
+        if args.username:
             account = gh.get_user(args.username)
+        elif config.get('password', None):
+            account = gh.get_user()
         else:
-            account = gh.get_user(args.username or args.login_or_token)
+            account = gh.get_user(args.login_or_token)
 
     IsAuthorized = isinstance(account, github.AuthenticatedUser.AuthenticatedUser)
+    assert not (bool(config.get('password', None)) ^ IsAuthorized), account
 
     filters = {}
     if IsAuthorized:
@@ -135,7 +160,7 @@ def init_parser():
     parser.add_argument("-t", "--type", help="Select the protocol for cloning", choices=['git', 'http', 'ssh'], default='ssh')
     parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
     parser.add_argument("-u", "--username", help="Backup USER account", metavar="USER")
-    parser.add_argument("-p", "--password", help="Authenticate with Github API")
+    parser.add_argument("-p", "--password", help="Authenticate with Github API (give no argument to check ~/.github-backup.conf or prompt for a password)", nargs="?", default=False)
     parser.add_argument("-P", "--prefix", help="Add prefix to repository directory names", default="")
     parser.add_argument("-o", "--organization", help="Backup Organizational repositories", metavar="ORG")
     parser.add_argument("-A", "--account", help="Backup account data", action='store_true')
