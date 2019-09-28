@@ -374,8 +374,9 @@ class RepositoryBackup(object):
     @classmethod
     def _backup_issues(cls, issues, args, dir):
         for issue in issues:
+            project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
             issue_data = issue.raw_data.copy()
-            LOGGER.info("     * %s", issue.number)
+            LOGGER.info("     * %s[%s]: %s", project, issue.number, issue.title)
             if args.include_issue_comments and issue.comments:
                 for comment in issue.get_comments():
                     issue_data.setdefault('comment_data', []).append(comment.raw_data)
@@ -383,7 +384,6 @@ class RepositoryBackup(object):
                 for event in issue.get_events():
                     issue_data.setdefault('event_data', []).append(event.raw_data)
 
-            project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
             issue_file = os.path.join(dir, 'issues', "{0}:{1}.json".format(project, issue.number))
             if not os.access(os.path.dirname(issue_file), os.F_OK):
                 mkdir_p(os.path.dirname(issue_file))
@@ -393,10 +393,11 @@ class RepositoryBackup(object):
     @classmethod
     def _backup_pulls(cls, issues, args, dir):
         for issue in issues:
+            project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
             if isinstance(issue, github.Issue.Issue):
                 issue = issue.as_pull_request()
             issue_data = issue.raw_data.copy()
-            LOGGER.info("     * %s", issue.number)
+            LOGGER.info("     * %s[%s]: %s", project, issue.number, issue.title)
             if args.include_pull_comments and issue.comments:
                 for comment in issue.get_comments():
                     issue_data.setdefault('comment_data', []).append(comment.raw_data)
@@ -404,7 +405,6 @@ class RepositoryBackup(object):
                 for commit in issue.get_commits():
                     issue_data.setdefault('commit_data', []).append(commit.raw_data)
 
-            project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
             issue_file = os.path.join(dir, 'pull-requests', "{0}:{1}.json".format(project, issue.number))
             if not os.access(os.path.dirname(issue_file), os.F_OK):
                 mkdir_p(os.path.dirname(issue_file))
