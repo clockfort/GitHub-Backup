@@ -404,7 +404,14 @@ class RepositoryBackup(object):
         for issue in issues:
             project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
             if isinstance(issue, github.Issue.Issue):
-                issue = issue.as_pull_request()
+                try:
+                    if issue.pull_request:
+                        issue = issue.as_pull_request()
+                    else:
+                        continue
+                except github.UnknownObjectException, e:
+                    LOGGER.info("     * %s[%s]: No associated pull request", project, issue.number)
+                    continue
             issue_data = issue.raw_data.copy()
             LOGGER.info("     * %s[%s]: %s", project, issue.number, issue.title)
             if args.include_pull_comments and issue.comments:
