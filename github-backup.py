@@ -252,10 +252,7 @@ def process_account(gh, account, args):
         LOGGER.info("    Getting issues for user %s", account.login)
         issues = []
         for filter in filters:
-            if IsAuthorized:
-                _issues = account.get_issues(state='all', filter=filter)
-            else:
-                _issues = gh.search_issues('', author=account.login, type='issue')
+            _issues = gh.search_issues('', author=account.login, type='issue')
             issues = itertools.chain(issues, _issues)
 
         RepositoryBackup._backup_issues(issues, args, dir)
@@ -264,10 +261,7 @@ def process_account(gh, account, args):
         LOGGER.info("    Getting pull requests for user %s", account.login)
         issues = []
         for filter in filters:
-            if IsAuthorized:
-                _issues = account.get_issues(state='all', filter=filter)
-            else:
-                _issues = gh.search_issues('', author=account.login, type='pr')
+            _issues = gh.search_issues('', author=account.login, type='pr')
             issues = itertools.chain(issues, _issues)
 
         RepositoryBackup._backup_pulls(issues, args, dir)
@@ -404,14 +398,7 @@ class RepositoryBackup(object):
         for issue in issues:
             project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
             if isinstance(issue, github.Issue.Issue):
-                try:
-                    if issue.pull_request:
-                        issue = issue.as_pull_request()
-                    else:
-                        continue
-                except github.UnknownObjectException, e:
-                    LOGGER.info("     * %s[%s]: No associated pull request", project, issue.number)
-                    continue
+                issue = issue.as_pull_request()
             issue_data = issue.raw_data.copy()
             LOGGER.info("     * %s[%s]: %s", project, issue.number, issue.title)
             if args.include_pull_comments and issue.comments:
