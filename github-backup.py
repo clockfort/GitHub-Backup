@@ -12,6 +12,7 @@ import os
 import errno
 import codecs
 import json
+import itertools
 import subprocess
 import logging
 from argparse import ArgumentParser
@@ -245,21 +246,29 @@ def process_account(gh, account, args):
         LOGGER.info("    Getting following repository list")
         fetch_url(account.following_url, os.path.join(dir, 'following.json'))
 
+    filters = ('assigned', 'created')
+
     if args.include_issues:
         LOGGER.info("    Getting issues for user %s", account.login)
-        if IsAuthorized:
-            issues = account.get_issues()
-        else:
-            issues = gh.search_issues('', author=account.login, type='issue')
+        issues = []
+        for filter in filters:
+            if IsAuthorized:
+                _issues = account.get_issues(state='all', filter=filter)
+            else:
+                _issues = gh.search_issues('', author=account.login, type='issue')
+            issues = itertools.chain(issues, _issues)
 
         RepositoryBackup._backup_issues(issues, args, dir)
 
     if args.include_pulls:
         LOGGER.info("    Getting pull requests for user %s", account.login)
-        if IsAuthorized:
-            issues = account.get_issues()
-        else:
-            issues = gh.search_issues('', author=account.login, type='pr')
+        issues = []
+        for filter in filters:
+            if IsAuthorized:
+                _issues = account.get_issues(state='all', filter=filter)
+            else:
+                _issues = gh.search_issues('', author=account.login, type='pr')
+            issues = itertools.chain(issues, _issues)
 
         RepositoryBackup._backup_pulls(issues, args, dir)
 
@@ -330,11 +339,11 @@ class RepositoryBackup(object):
 
             if self.args.include_issues:
                 LOGGER.info("    Getting issues for repo %s", self.repo.name)
-                self._backup_issues(self.repo.get_issues(), self.args, os.path.dirname(self.dir))
+                self._backup_issues(self.repo.get_issues(state='all'), self.args, os.path.dirname(self.dir))
 
             if self.args.include_pulls:
                 LOGGER.info("    Getting pull requests for repo %s", self.repo.name)
-                self._backup_pulls(self.repo.get_pulls(), self.args, os.path.dirname(self.dir))
+                self._backup_pulls(self.repo.get_pulls(state='all'), self.args, os.path.dirname(self.dir))
 
     def clone_repo(self, url, dir):
         git_args = [url, os.path.basename(dir)]
