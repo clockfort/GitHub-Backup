@@ -230,23 +230,23 @@ def process_account(gh, account, args):
             json_dump(list(account.get_emails()), f)
 
     if args.include_starred:
-        LOGGER.debug("    Getting starred repository list")
+        LOGGER.info("    Getting starred repository list")
         fetch_url(account.starred_url, os.path.join(dir, 'starred.json'))
 
     if args.include_watched:
-        LOGGER.debug("    Getting watched repository list")
+        LOGGER.info("    Getting watched repository list")
         fetch_url(account.subscriptions_url, os.path.join(dir, 'watched.json'))
 
     if args.include_followers:
-        LOGGER.debug("    Getting followers repository list")
+        LOGGER.info("    Getting followers repository list")
         fetch_url(account.followers_url, os.path.join(dir, 'followers.json'))
 
     if args.include_following:
-        LOGGER.debug("    Getting following repository list")
+        LOGGER.info("    Getting following repository list")
         fetch_url(account.following_url, os.path.join(dir, 'following.json'))
 
     if args.include_issues:
-        LOGGER.debug("    Getting issues for user %s", account.login)
+        LOGGER.info("    Getting issues for user %s", account.login)
         if IsAuthorized:
             issues = account.get_issues()
         else:
@@ -255,7 +255,7 @@ def process_account(gh, account, args):
         RepositoryBackup._backup_issues(issues, args, dir)
 
     if args.include_pulls:
-        LOGGER.debug("    Getting pull requests for user %s", account.login)
+        LOGGER.info("    Getting pull requests for user %s", account.login)
         if IsAuthorized:
             issues = account.get_issues()
         else:
@@ -329,11 +329,11 @@ class RepositoryBackup(object):
                 self._backup_releases()
 
             if self.args.include_issues:
-                LOGGER.debug("    Getting issues for repo %s", self.repo.name)
+                LOGGER.info("    Getting issues for repo %s", self.repo.name)
                 self._backup_issues(self.repo.get_issues(), self.args, os.path.dirname(self.dir))
 
             if self.args.include_pulls:
-                LOGGER.debug("    Getting pull requests for repo %s", self.repo.name)
+                LOGGER.info("    Getting pull requests for repo %s", self.repo.name)
                 self._backup_pulls(self.repo.get_pulls(), self.args, os.path.dirname(self.dir))
 
     def clone_repo(self, url, dir):
@@ -375,7 +375,7 @@ class RepositoryBackup(object):
     def _backup_issues(cls, issues, args, dir):
         for issue in issues:
             issue_data = issue.raw_data.copy()
-            LOGGER.debug("     * %s", issue.number)
+            LOGGER.info("     * %s", issue.number)
             if args.include_issue_comments and issue.comments:
                 for comment in issue.get_comments():
                     issue_data.setdefault('comment_data', []).append(comment.raw_data)
@@ -396,7 +396,7 @@ class RepositoryBackup(object):
             if isinstance(issue, github.Issue.Issue):
                 issue = issue.as_pull_request()
             issue_data = issue.raw_data.copy()
-            LOGGER.debug("     * %s", issue.number)
+            LOGGER.info("     * %s", issue.number)
             if args.include_pull_comments and issue.comments:
                 for comment in issue.get_comments():
                     issue_data.setdefault('comment_data', []).append(comment.raw_data)
