@@ -59,11 +59,12 @@ def main():
         args.include_pulls = True
         args.include_pull_comments = True
         args.include_pull_commits = True
+        args.include_keys = True
         args.include_releases = True
         args.include_assets = True
         args.include_wiki = True
     if args.include_starred or args.include_watched or args.include_followers \
-       or args.include_following:
+       or args.include_following or args.include_keys:
         args.account = True
 
     args.backupdir = args.backupdir.rstrip("/")
@@ -114,6 +115,10 @@ def main():
 
     IsAuthorized = isinstance(account, github.AuthenticatedUser.AuthenticatedUser)
     assert not (bool(config.get('password', None)) ^ IsAuthorized), account
+
+    if args.include_keys and not IsAuthorized:
+        LOGGER.info("Cannot backup keys with unauthenticated account, ignoring...")
+        args.include_keys = False
 
     filters = {}
     if IsAuthorized:
@@ -208,6 +213,10 @@ def init_parser():
                         action='store_true',
                         dest='include_pull_commits',
                         help='include pull request commits in backup')
+    parser.add_argument('--keys',
+                        action='store_true',
+                        dest='include_keys',
+                        help='include ssh keys in backup')
     parser.add_argument('--wikis',
                         action='store_true',
                         dest='include_wiki',
@@ -270,6 +279,16 @@ def process_account(gh, account, args):
     if args.include_following:
         LOGGER.info("    Getting following repository list")
         fetch_url(account.following_url, os.path.join(dir, 'following.json'))
+
+    if args.include_keys:
+        LOGGER.info("    Getting keys")
+        for key in account.get_keys():
+            key_dir = os.path.join(dir, 'keys')
+            if not os.access(key_dir, os.F_OK):
+                mkdir_p(key_dir)
+            key_file = os.path.join(key_dir, key.title+'.json')
+            with codecs.open(key_file, 'w', encoding='utf-8') as f:
+                json_dump(key.raw_data, f)
 
     filters = ('assigned', 'created')
 
