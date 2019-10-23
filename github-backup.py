@@ -27,11 +27,11 @@ import github
 
 LOGGER = logging.getLogger('github-backup')
 
-IsAuthorized = False
+IS_AUTHORIZED = False
 CONFFILE = os.path.join(os.getenv('HOME'), '.github-backup.conf')
 
 def main():
-    global IsAuthorized
+    global IS_AUTHORIZED
     logging.basicConfig(level=logging.INFO)
 
 
@@ -113,15 +113,15 @@ def main():
         else:
             account = gh.get_user(args.login_or_token)
 
-    IsAuthorized = isinstance(account, github.AuthenticatedUser.AuthenticatedUser)
-    assert not (bool(config.get('password', None)) ^ IsAuthorized), account
+    IS_AUTHORIZED = isinstance(account, github.AuthenticatedUser.AuthenticatedUser)
+    assert not (bool(config.get('password', None)) ^ IS_AUTHORIZED), account
 
-    if args.include_keys and not IsAuthorized:
+    if args.include_keys and not IS_AUTHORIZED:
         LOGGER.info("Cannot backup keys with unauthenticated account, ignoring...")
         args.include_keys = False
 
     filters = {}
-    if IsAuthorized:
+    if IS_AUTHORIZED:
         # Get all repos
         filters = {
             'affiliation': ','.join(args.affiliation),
@@ -259,7 +259,7 @@ def process_account(gh, account, args):
     with codecs.open(account_file, 'w', encoding='utf-8') as f:
         json_dump(account.raw_data, f)
 
-    if IsAuthorized:
+    if IS_AUTHORIZED:
         emails_file = os.path.join(dir, 'emails.json')
         with codecs.open(emails_file, 'w', encoding='utf-8') as f:
             json_dump(list(account.get_emails()), f)
@@ -326,7 +326,7 @@ class RepositoryBackup(object):
 
         if self.is_gist:
             url = repo.git_pull_url
-        elif args.type == 'http' or not IsAuthorized:
+        elif args.type == 'http' or not IS_AUTHORIZED:
             url = repo.clone_url
         elif args.type == 'ssh':
             url = repo.ssh_url
