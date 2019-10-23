@@ -3,6 +3,7 @@
 """
 Authors: Anthony Gargiulo (anthony@agargiulo.com)
          Steffen Vogel (post@steffenvogel.de)
+         Glenn Washburn (development@efficientek.com)
 
 Created: Fri Jun 15 2012
 """
