@@ -246,7 +246,9 @@ def fetch_url(url, outfile):
         "User-Agent": "PyGithub/Python"
     }
     with open(outfile, 'w') as f:
-        f.write(requests.get(url, headers=headers).content)
+        resp = requests.get(url, headers=headers)
+        LOGGER.debug("GET %s %r ==> %d %r", url, headers, resp.status_code, resp.headers)
+        f.write(resp.content.decode(resp.encoding or 'utf-8'))
 
 def process_account(gh, account, args):
     LOGGER.info("Processing account: %s", account.login)
