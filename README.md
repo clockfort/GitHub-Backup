@@ -1,24 +1,22 @@
-GitHub-Backup
-============================
+# GitHub-Backup
 
-Description
-----------------------------
+## Description
 
 GitHub-Backup makes a local backup copy of all of a github user's (or github organization's) repositories.
 
-Dependencies
-----------------------------
+## Dependencies
 
 GitHub-Backup requires the `PyGitHub` Python package for the GitHub API v3.
 
 Installation is simple with
 
-	pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
+```
 
-Usage
-----------------------------
+## Usage
 
-````
+```
 usage: github-backup.py [-h] [-v {all,public,private}]
                         [-a {owner,collaborator,organization_member}] [-d]
                         [-q] [-m] [-f] [-g ARGS [ARGS ...]]
@@ -54,29 +52,28 @@ optional arguments:
                         Add prefix to repository directory names
   -o ORG, --organization ORG
                         Backup Organizational repositories
-````
+```
 
 Then, put it in a cron job somewhere and forget about it for eternity.
 
-How To Back Up Entire GitHub Organisation Repos
--------------------------
+# How To Back Up Entire GitHub Organisation Repos
 
 1. Install Dependencies: `sudo pip install pygithub3`
 2. Clone this repo using `$ git clone https://github.com/clockfort/GitHub-Backup.git`
 3. Just open the cloned repo folder and run the terminal:
 
-```
+```bash
 ./github-backup.py [Your GitHub Username] [Path To Saving Directory] -o [For Organisation]
 ```
 
 Example:
 
-```
+```bash
 ./github-backup.py mohamed786 /home/mohamed786/githubbak -o LineageOS
 ```
 
-Why This Software Exists
--------------------------
+## Why This Software Exists
+
 This software is useful in many cases:
 
   - GitHub suddenly explodes.
@@ -86,13 +83,11 @@ This software is useful in many cases:
   - You are paranoid tinfoil-hat wearer who needs to back up everything in triplicate on a variety of outdated tape media.
 
 
-Questions, Improvements, Etc
------------------------------
+## Questions, Improvements, Etc
 
 If you have any improvements, I'm happy, (grateful, in fact) to entertain pull requests/patches, just drop me a line or message me on GitHub.
 
-Contributors
-----------------------------
+## Contributors
 
 Idea/original implementation by 
 
