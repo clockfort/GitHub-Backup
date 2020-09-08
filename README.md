@@ -11,7 +11,7 @@ GitHub-Backup requires the `PyGitHub` Python package for the GitHub API v3.
 Installation is simple with
 
 ```bash
-pip install -r requirements.txt
+pip install git+https://github.com/clockfort/GitHub-Backup
 ```
 
 ## Usage
@@ -88,7 +88,7 @@ Then, put it in a cron job somewhere and forget about it for eternity.
 Example:
 
 ```bash
-./github-backup.py mohamed786 /home/mohamed786/githubbak -o LineageOS
+github-backup mohamed786 /home/mohamed786/githubbak -o LineageOS
 ```
 
 ## Use a a personal access token (PAT) instead of your password
