@@ -17,17 +17,15 @@ pip install git+https://github.com/clockfort/GitHub-Backup
 ## Usage
 
 ```
-usage: github-backup [-h] [-v {all,public,private}]
-                        [-a {owner,collaborator,organization_member}] [-d]
-                        [-q] [-m] [-f] [-g ARGS [ARGS ...]]
-                        [-t {git,http,ssh}] [-s SUFFIX] [-p PASSWORD]
-                        [-P PREFIX] [-o ORG]
+usage: github-backup.py [-h] [-v {all,public,private}] [-a {owner,collaborator,organization_member}] [-d] [-q] [-m] [-f] [--skip-repos] [-g ARGS [ARGS ...]] [-t {git,http,ssh}] [-s SUFFIX] [-u USER] [-p [PASSWORD]]
+                        [-P PREFIX] [-o ORG] [-A] [--all] [--starred] [--watched] [--followers] [--following] [--issues] [--issue-comments] [--issue-events] [--pulls] [--pull-comments] [--pull-commits] [--keys]
+                        [--wikis] [--gists] [--starred-gists] [--releases] [--assets]
                         login_or_token backupdir
 
-makes a backup of all of a github user's repositories
+makes a backup of a github user's account
 
 positional arguments:
-  login_or_token        A Github username or token
+  login_or_token        A Github username or token for authenticating
   backupdir             The folder where you want your backups to go
 
 optional arguments:
@@ -40,18 +38,39 @@ optional arguments:
   -q, --quiet           Only show errors
   -m, --mirror          Create a bare mirror
   -f, --skip-forks      Skip forks
+  --skip-repos          Skip backing up repositories
   -g ARGS [ARGS ...], --git ARGS [ARGS ...]
                         Pass extra arguments to git
   -t {git,http,ssh}, --type {git,http,ssh}
                         Select the protocol for cloning
   -s SUFFIX, --suffix SUFFIX
                         Add suffix to repository directory names
-  -p PASSWORD, --password PASSWORD
-                        Authenticate with Github API
+  -u USER, --username USER
+                        Backup USER account
+  -p [PASSWORD], --password [PASSWORD]
+                        Authenticate with Github API (give no argument to check ~/.github-backup.conf or prompt for a password)
   -P PREFIX, --prefix PREFIX
                         Add prefix to repository directory names
   -o ORG, --organization ORG
                         Backup Organizational repositories
+  -A, --account         Backup account data
+  --all                 include everything in backup (not including [*])
+  --starred             include JSON output of starred repositories in backup
+  --watched             include JSON output of watched repositories in backup
+  --followers           include JSON output of followers in backup
+  --following           include JSON output of following users in backup
+  --issues              include issues in backup
+  --issue-comments      include issue comments in backup
+  --issue-events        include issue events in backup
+  --pulls               include pull requests in backup
+  --pull-comments       include pull request review comments in backup
+  --pull-commits        include pull request commits in backup
+  --keys                include ssh keys in backup
+  --wikis               include wiki clone in backup
+  --gists               include gists in backup [*]
+  --starred-gists       include starred gists in backup [*]
+  --releases            include release information, not including assets or binaries
+  --assets              include assets alongside release information; only applies if including releases
 ```
 
 Then, put it in a cron job somewhere and forget about it for eternity.
