@@ -352,7 +352,7 @@ class RepositoryBackup(object):
         if not os.access(os.path.dirname(self.dir), os.F_OK):
             mkdir_p(os.path.dirname(self.dir))
         if not os.access(config, os.F_OK):
-            LOGGER.info("Repo doesn't exists, lets clone it")
+            LOGGER.info("Repo doesn't exist, lets clone it")
             self.clone_repo(self.url, self.dir)
         else:
             LOGGER.info("Repo already exists, let's try to update it instead")
@@ -363,7 +363,7 @@ class RepositoryBackup(object):
             if not os.access(os.path.dirname(self.wiki_dir), os.F_OK):
                 mkdir_p(os.path.dirname(self.wiki_dir))
             if not os.access(config, os.F_OK):
-                LOGGER.info("Wiki repo doesn't exists, lets clone it")
+                LOGGER.info("Wiki repo doesn't exist, lets clone it")
                 self.clone_repo(self.wiki_url, self.wiki_dir)
             else:
                 LOGGER.info("Wiki repo already exists, let's try to update it instead")
