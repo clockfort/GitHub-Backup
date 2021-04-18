@@ -183,16 +183,16 @@ def rate_limited_retry():
 
 @rate_limited_retry()
 def get_search_issues(gh, author, type):
-    _issues = gh.search_issues('', author=author, type=type)
+    _issues = list(gh.search_issues('', author=author, type=type))
     return _issues
 
 @rate_limited_retry()
 def get_issue_comments(issue):
-    return issue.get_comments()
+    return list(issue.get_comments())
 
 @rate_limited_retry()
 def get_issue_events(issue):
-    return issue.get_events()
+    return list(issue.get_events())
 
 @rate_limited_retry()
 def get_issue_as_pull_request(issue):
@@ -200,23 +200,23 @@ def get_issue_as_pull_request(issue):
 
 @rate_limited_retry()
 def get_issue_commits(issue):
-    return issue.get_commits()
+    return list(issue.get_commits())
 
 @rate_limited_retry()
 def get_repo_releases(repo):
-    return repo.get_releases()
+    return list(repo.get_releases())
 
 @rate_limited_retry()
 def get_release_assets(release):
-    return release.get_assets()
+    return list(release.get_assets())
 
 @rate_limited_retry()
 def get_repo_issues(repo, state):
-    return repo.get_issues(state=state)
+    return list(repo.get_issues(state=state))
 
 @rate_limited_retry()
 def get_repo_pulls(repo, state):
-    return repo.get_pulls(state=state)
+    return list(repo.get_pulls(state=state))
 
 @rate_limited_retry()
 def get_account_login(account):
@@ -276,19 +276,19 @@ def get_account_following_url(account):
 
 @rate_limited_retry()
 def get_account_keys(account):
-    return account.get_keys()
+    return list(account.get_keys())
 
 @rate_limited_retry()
 def get_account_gists(account):
-    return account.get_gists()
+    return list(account.get_gists())
 
 @rate_limited_retry()
 def get_account_starred_gists(account):
-    return account.get_starred_gists()
+    return list(account.get_starred_gists())
 
 @rate_limited_retry()
 def get_account_repos(account, **filters):
-    return account.get_repos(**filters)
+    return list(account.get_repos(**filters))
 
 def init_parser():
     """Set up the argument parser."""
