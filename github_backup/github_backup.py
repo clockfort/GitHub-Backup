@@ -17,6 +17,8 @@ import itertools
 import subprocess
 import logging
 import getpass
+from datetime import datetime, timezone
+import time
 try: #PY3
     from configparser import SafeConfigParser as ConfigParser
 except ImportError:
@@ -25,6 +27,7 @@ from argparse import ArgumentParser
 
 import requests
 import github
+from github import RateLimitExceededException
 
 LOGGER = logging.getLogger('github-backup')
 
@@ -95,6 +98,7 @@ def main():
         config['password'] = args.password
 
     LOGGER.debug("Github config: %r", config)
+    global gh
     gh = github.Github(**config)
 
     # Check that backup dir exists
@@ -133,20 +137,158 @@ def main():
         process_account(gh, account, args)
 
     if args.include_gists:
-        for gist in account.get_gists():
+        for gist in get_account_gists(account):
             RepositoryBackup(gist, args).backup()
 
     if args.include_starred_gists and hasattr(account, 'get_starred_gists'):
-        for gist in account.get_starred_gists():
+        for gist in get_account_starred_gists(account):
             RepositoryBackup(gist, args).backup()
 
     if not args.skip_repos:
-        repos = account.get_repos(**filters)
+        repos = get_account_repos(account, **filters) 
         for repo in repos:
             if args.skip_forks and repo.fork:
                 continue
 
             RepositoryBackup(repo, args).backup()
+
+def rate_limited_retry():
+    def decorator(func):
+        def ret(*args, **kwargs):
+            for _ in range(3):
+                try:
+                    return func(*args, **kwargs)
+                except RateLimitExceededException:
+                    limits = gh.get_rate_limit()
+                    print(f"Rate limit exceeded")
+                    print("Search:", limits.search, "Core:", limits.core, "GraphQl:", limits.graphql)
+                    
+                    if limits.search.remaining == 0:
+                        limited = limits.search
+                    elif limits.graphql.remaining == 0:
+                        limited = limits.graphql
+                    else:
+                        limited = limits.core
+                    reset = limited.reset.replace(tzinfo=timezone.utc)
+                    now = datetime.now(timezone.utc)
+                    seconds = (reset - now).total_seconds() + 30
+                    print(f"Reset is in {seconds} seconds.")
+                    if seconds > 0.0:
+                        print(f"Waiting for {seconds} seconds...")
+                        time.sleep(seconds)
+                        print("Done waiting - resume!")
+            raise Exception("Failed too many times")
+        return ret
+    return decorator
+
+@rate_limited_retry()
+def get_search_issues(gh, author, type):
+    _issues = gh.search_issues('', author=author, type=type)
+    return _issues
+
+@rate_limited_retry()
+def get_issue_comments(issue):
+    return issue.get_comments()
+
+@rate_limited_retry()
+def get_issue_events(issue):
+    return issue.get_events()
+
+@rate_limited_retry()
+def get_issue_as_pull_request(issue):
+    return issue.as_pull_request()
+
+@rate_limited_retry()
+def get_issue_commits(issue):
+    return issue.get_commits()
+
+@rate_limited_retry()
+def get_repo_releases(repo):
+    return repo.get_releases()
+
+@rate_limited_retry()
+def get_release_assets(release):
+    return release.get_assets()
+
+@rate_limited_retry()
+def get_repo_issues(repo, state):
+    return repo.get_issues(state=state)
+
+@rate_limited_retry()
+def get_repo_pulls(repo, state):
+    return repo.get_pulls(state=state)
+
+@rate_limited_retry()
+def get_account_login(account):
+    return account.login
+
+@rate_limited_retry()
+def get_comment_raw_data(comment):
+    return comment.raw_data
+
+@rate_limited_retry()
+def get_release_raw_data(release):
+    return release.raw_data
+
+@rate_limited_retry()
+def get_commit_raw_data(commit):
+    return commit.raw_data
+
+@rate_limited_retry()
+def get_repo_raw_data(repo):
+    return repo.raw_data
+
+@rate_limited_retry()
+def get_event_raw_data(event):
+    return event.raw_data
+
+@rate_limited_retry()
+def get_account_raw_data(account):
+    return account.raw_data
+
+@rate_limited_retry()
+def get_key_raw_data(key):
+    return key.raw_data
+
+@rate_limited_retry()
+def get_issue_raw_data(issue):
+    return issue.raw_data
+
+@rate_limited_retry()
+def get_account_emails(account):
+    return account.get_emails()
+
+@rate_limited_retry()
+def get_account_starred_urls(account):
+    return account.starred_url
+
+@rate_limited_retry()
+def get_account_subscriptions_url(account):
+    return account.subscriptions_url
+
+@rate_limited_retry()
+def get_account_followers_url(account):
+    return account.followers_url
+
+@rate_limited_retry()
+def get_account_following_url(account):
+    return account.following_url
+
+@rate_limited_retry()
+def get_account_keys(account):
+    return account.get_keys()
+
+@rate_limited_retry()
+def get_account_gists(account):
+    return account.get_gists()
+
+@rate_limited_retry()
+def get_account_starred_gists(account):
+    return account.get_starred_gists()
+
+@rate_limited_retry()
+def get_account_repos(account, **filters):
+    return account.get_repos(**filters)
 
 def init_parser():
     """Set up the argument parser."""
@@ -252,7 +394,7 @@ def fetch_url(url, outfile):
         f.write(resp.content.decode(resp.encoding or 'utf-8'))
 
 def process_account(gh, account, args):
-    LOGGER.info("Processing account: %s", account.login)
+    LOGGER.info("Processing account: %s", get_account_login(account))
 
     dir = os.path.join(args.backupdir, 'account')
     if not os.access(dir, os.F_OK):
@@ -260,55 +402,55 @@ def process_account(gh, account, args):
 
     account_file = os.path.join(dir, 'account.json')
     with codecs.open(account_file, 'w', encoding='utf-8') as f:
-        json_dump(account.raw_data, f)
+        json_dump(get_account_raw_data(account), f)
 
     if IS_AUTHORIZED:
         emails_file = os.path.join(dir, 'emails.json')
         with codecs.open(emails_file, 'w', encoding='utf-8') as f:
-            json_dump(list(account.get_emails()), f)
+            json_dump(list(get_account_emails(account)), f)
 
     if args.include_starred:
         LOGGER.info("    Getting starred repository list")
-        fetch_url(account.starred_url, os.path.join(dir, 'starred.json'))
+        fetch_url(get_account_starred_urls(account), os.path.join(dir, 'starred.json'))
 
     if args.include_watched:
         LOGGER.info("    Getting watched repository list")
-        fetch_url(account.subscriptions_url, os.path.join(dir, 'watched.json'))
+        fetch_url(get_account_subscriptions_url(account), os.path.join(dir, 'watched.json'))
 
     if args.include_followers:
         LOGGER.info("    Getting followers repository list")
-        fetch_url(account.followers_url, os.path.join(dir, 'followers.json'))
+        fetch_url(get_account_followers_url(account), os.path.join(dir, 'followers.json'))
 
     if args.include_following:
         LOGGER.info("    Getting following repository list")
-        fetch_url(account.following_url, os.path.join(dir, 'following.json'))
+        fetch_url(get_account_following_url(account), os.path.join(dir, 'following.json'))
 
     if args.include_keys:
         LOGGER.info("    Getting keys")
-        for key in account.get_keys():
+        for key in get_account_keys(account):
             key_dir = os.path.join(dir, 'keys')
             if not os.access(key_dir, os.F_OK):
                 mkdir_p(key_dir)
             key_file = os.path.join(key_dir, key.title+'.json')
             with codecs.open(key_file, 'w', encoding='utf-8') as f:
-                json_dump(key.raw_data, f)
+                json_dump(get_key_raw_data(key), f)
 
     filters = ('assigned', 'created')
 
     if args.include_issues:
-        LOGGER.info("    Getting issues for user %s", account.login)
+        LOGGER.info("    Getting issues for user %s", get_account_login(account))
         issues = []
         for filter in filters:
-            _issues = gh.search_issues('', author=account.login, type='issue')
+            _issues = get_search_issues(gh, get_account_login(account), 'issue')
             issues = itertools.chain(issues, _issues)
 
         RepositoryBackup._backup_issues(issues, args, dir)
 
     if args.include_pulls:
-        LOGGER.info("    Getting pull requests for user %s", account.login)
+        LOGGER.info("    Getting pull requests for user %s", get_account_login(account))
         issues = []
         for filter in filters:
-            _issues = gh.search_issues('', author=account.login, type='pr')
+            _issues = get_search_issues(gh, get_account_login(account), 'pr')
             issues = itertools.chain(issues, _issues)
 
         RepositoryBackup._backup_pulls(issues, args, dir)
@@ -373,18 +515,20 @@ class RepositoryBackup(object):
             # Save extra gist info
             gist_file = os.path.join(os.path.dirname(self.dir), self.repo.id+'.json')
             with codecs.open(gist_file, 'w', encoding='utf-8') as f:
-                json_dump(self.repo.raw_data, f)
+                json_dump(get_repo_raw_data(self.repo), f)
         else:
             if self.args.include_releases:
                 self._backup_releases()
 
             if self.args.include_issues:
                 LOGGER.info("    Getting issues for repo %s", self.repo.name)
-                self._backup_issues(self.repo.get_issues(state='all'), self.args, os.path.dirname(self.dir))
+                #self._backup_issues(self.repo.get_issues(state='all'), self.args, os.path.dirname(self.dir))
+                self._backup_issues(get_repo_issues(self.repo, 'all'), self.args, os.path.dirname(self.dir))
 
             if self.args.include_pulls:
                 LOGGER.info("    Getting pull requests for repo %s", self.repo.name)
-                self._backup_pulls(self.repo.get_pulls(state='all'), self.args, os.path.dirname(self.dir))
+                #self._backup_pulls(self.repo.get_pulls(state='all'), self.args, os.path.dirname(self.dir))
+                self._backup_pulls(get_repo_pulls(self.repo, 'all'), self.args, os.path.dirname(self.dir))
 
     def clone_repo(self, url, dir):
         git_args = [url, os.path.basename(dir)]
@@ -425,14 +569,15 @@ class RepositoryBackup(object):
     def _backup_issues(cls, issues, args, dir):
         for issue in issues:
             project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
-            issue_data = issue.raw_data.copy()
+            issue_data = get_issue_raw_data(issue).copy()
             LOGGER.info("     * %s[%s]: %s", project, issue.number, issue.title)
             if args.include_issue_comments and issue.comments:
-                for comment in issue.get_comments():
-                    issue_data.setdefault('comment_data', []).append(comment.raw_data)
+                #for comment in issue.get_comments():
+                for comment in get_issue_comments(issue):
+                    issue_data.setdefault('comment_data', []).append(get_comment_raw_data(comment))
             if args.include_issue_events:
-                for event in issue.get_events():
-                    issue_data.setdefault('event_data', []).append(event.raw_data)
+                for event in get_issue_events(issue):
+                    issue_data.setdefault('event_data', []).append(get_event_raw_data(event))
 
             issue_file = os.path.join(dir, 'issues', "{0}:{1}.json".format(project, issue.number))
             if not os.access(os.path.dirname(issue_file), os.F_OK):
@@ -445,15 +590,15 @@ class RepositoryBackup(object):
         for issue in issues:
             project = os.path.basename(os.path.dirname(os.path.dirname(issue.url)))
             if isinstance(issue, github.Issue.Issue):
-                issue = issue.as_pull_request()
-            issue_data = issue.raw_data.copy()
+                issue = get_issue_as_pull_request(issue)
+            issue_data = get_issue_raw_data(issue).copy()
             LOGGER.info("     * %s[%s]: %s", project, issue.number, issue.title)
             if args.include_pull_comments and issue.comments:
-                for comment in issue.get_comments():
-                    issue_data.setdefault('comment_data', []).append(comment.raw_data)
+                for comment in get_issue_comments(issue):
+                    issue_data.setdefault('comment_data', []).append(get_comment_raw_data(comment))
             if args.include_pull_commits and issue.commits:
-                for commit in issue.get_commits():
-                    issue_data.setdefault('commit_data', []).append(commit.raw_data)
+                for commit in get_issue_commits(issue):
+                    issue_data.setdefault('commit_data', []).append(get_commit_raw_data(commit))
 
             issue_file = os.path.join(dir, 'pull-requests', "{0}:{1}.json".format(project, issue.number))
             if not os.access(os.path.dirname(issue_file), os.F_OK):
@@ -462,16 +607,16 @@ class RepositoryBackup(object):
                 json_dump(issue_data, f)
 
     def _backup_releases(self):
-        for release in self.repo.get_releases():
+        for release in get_repo_releases(self.repo):
             rel_dir = os.path.join(os.path.dirname(self.dir), 'releases')
             rel_file = os.path.join(rel_dir, release.tag_name+'.json')
             if not os.access(rel_dir, os.F_OK):
                 mkdir_p(rel_dir)
             with codecs.open(rel_file, 'w', encoding='utf-8') as f:
-                json_dump(release.raw_data, f)
+                json_dump(get_release_raw_data(release), f)
 
             if self.args.include_assets:
-                for asset in release.get_assets():
+                for asset in get_release_assets(release):
                     asset_dir = os.path.join(rel_dir, release.tag_name)
                     asset_file = os.path.join(asset_dir, asset.name)
                     if not os.access(asset_dir, os.F_OK):
