@@ -103,7 +103,7 @@ def main():
 
     if args.organization:
         if args.password:
-            account = gh.get_organization(args.org)
+            account = gh.get_organization(args.organization)
         else:
             account = gh.get_organization(args.login_or_token)
     else:
