@@ -71,14 +71,13 @@ def main():
     args.backupdir = args.backupdir.rstrip("/")
 
     # Make the connection to Github here.
-    config = {}
+    config = {'login_or_token': args.login_or_token}
     if args.password == False:
         # no password option given, continue unauthenticated
         # unauthenticated users can only use http git method
         args.type = 'http'
     elif args.password == None:
         # password option given, but no password value given
-        config = {'login_or_token': args.login_or_token}
         if os.path.isfile(CONFFILE):
             cfg = ConfigParser()
             cfg.read(CONFFILE)
@@ -91,7 +90,6 @@ def main():
             if password:
                 config['password'] = password
     else:
-        config = {'login_or_token': args.login_or_token}
         config['password'] = args.password
 
     LOGGER.debug("Github config: %r", config)
