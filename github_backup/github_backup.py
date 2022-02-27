@@ -148,6 +148,9 @@ def main():
 
             RepositoryBackup(repo, args).backup()
 
+    if args.s3_bucket_name:
+        S3ObjectStorage(args).upload()
+
 def init_parser():
     """Set up the argument parser."""
 
@@ -170,6 +173,9 @@ def init_parser():
     parser.add_argument("-P", "--prefix", help="Add prefix to repository directory names", default="")
     parser.add_argument("-o", "--organization", help="Backup Organizational repositories", metavar="ORG")
     parser.add_argument("-A", "--account", help="Backup account data", action='store_true')
+    parser.add_argument("--s3-bucket-name", help="S3 Object storage bucket name", type=str)
+    parser.add_argument("--s3-path-prefix", help="S3 Object storage path prefix", default="")
+    parser.add_argument("--s3-endpoint-url", help="S3 Object storage endpoint url", type=str)
     parser.add_argument('--all',
                         action='store_true',
                         dest='include_everything',
@@ -478,6 +484,37 @@ class RepositoryBackup(object):
                         mkdir_p(asset_dir)
                     fetch_url(asset.browser_download_url, asset_file)
                     assert asset.size == os.path.getsize(asset_file)
+
+
+class S3ObjectStorage(object):
+    def __init__(self, args):
+        self.args = args
+
+        session_client_args = {'service_name': 's3'}
+        if args.s3_endpoint_url:
+            session_client_args['endpoint_url'] = args.s3_endpoint_url
+
+        import boto3
+
+        session = boto3.session.Session()
+        self.client = session.client(**session_client_args)
+
+    def upload(self):
+        # backupdir = os.path.abspath(self.args.backupdir)
+        backupdir = self.args.backupdir
+        bucket_name = self.args.s3_bucket_name
+        path_prefix = self.args.s3_path_prefix
+
+        LOGGER.info("Uploading into remote storage")
+
+        for root, _, files in os.walk(backupdir):
+            for filename in files:
+                local_path = os.path.join(root, filename)
+                remote_path = os.path.relpath(local_path, backupdir)
+                remote_path = os.path.join(path_prefix, os.path.relpath(local_path, backupdir))
+
+                LOGGER.debug(f"Uploading {local_path} to s3://{bucket_name}/{remote_path}")
+                self.client.upload_file(local_path, bucket_name, remote_path)
 
 
 def git(gcmd, args=[], gargs=[], gdir=""):

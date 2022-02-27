@@ -10,7 +10,8 @@ setup(name='GitHub-Backup',
       packages=['github_backup'],
       install_requires=[
           'requests',
-          'PyGitHub'
+          'PyGitHub',
+          'boto3'
       ],
       entry_points = {
         'console_scripts': [
