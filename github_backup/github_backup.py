@@ -165,7 +165,7 @@ def init_parser():
     parser.add_argument("-m", "--mirror", help="Create a bare mirror", action="store_true")
     parser.add_argument("-f", "--skip-forks", help="Skip forks", action="store_true")
     parser.add_argument("--skip-repos", help="Skip backing up repositories", action="store_true")
-    parser.add_argument("-g", "--git", nargs="+", help="Pass extra arguments to git", type=list, default=[], metavar="ARGS")
+    parser.add_argument("-g", "--git", help="Pass extra arguments to git", action='append', default=[], metavar="ARGS")
     parser.add_argument("-t", "--type", help="Select the protocol for cloning", choices=['git', 'http', 'ssh'], default='ssh')
     parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
     parser.add_argument("-u", "--username", help="Backup USER account", metavar="USER")
