@@ -10,6 +10,7 @@ Created: Fri Jun 15 2012
 
 
 import os
+import re
 import errno
 import codecs
 import json
@@ -337,7 +338,15 @@ class RepositoryBackup(object):
         elif args.type == 'git':
             url = repo.git_url
         elif args.type == 'http' or not IS_AUTHORIZED:
-            url = repo.clone_url
+            if re.match('^ghp_.+$', args.login_or_token):
+                url = re.sub('^https://', f'https://{args.login_or_token}:x-auth-basic@', repo.clone_url)
+            elif args.password:
+                if args.username:
+                    url = re.sub('^https://', f'https://{args.username}:{args.password}@', repo.clone_url)
+                else:
+                    url = re.sub('^https://', f'https://{args.login_or_token}:{args.password}@', repo.clone_url)
+            else:
+                url = repo.clone_url
         self.url = url
 
         self.wiki_url = None
