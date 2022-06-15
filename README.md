@@ -75,20 +75,20 @@ optional arguments:
 
 Then, put it in a cron job somewhere and forget about it for eternity.
 
-## How To Back Up Entire GitHub Organisation Repos
+## How-to back up entire GitHub organisation repos
 
 1. Install Dependencies: `sudo pip install pygithub3`
 2. Clone this repo using `$ git clone https://github.com/clockfort/GitHub-Backup.git`
 3. Just open the cloned repo folder and run the terminal:
 
 ```bash
-./github-backup.py [Your GitHub Username] [Path To Saving Directory] -o [For Organisation]
+./github-backup.py [Organization Name] [Path To Saving Directory] -o [Organization Name]
 ```
 
 Example:
 
 ```bash
-github-backup mohamed786 /home/mohamed786/githubbak -o LineageOS
+github-backup LineageOS /home/mohamed786/githubbak -o LineageOS
 ```
 
 ## Use a a personal access token (PAT) instead of your password
@@ -99,7 +99,7 @@ Follow the steps described [here in the GitHub documentation](https://docs.githu
 Using a PAT can also work around issues when two factor authentication (TFA) is enabled on your account.
 
 
-## Why This Software Exists
+## Why this software exists
 
 This software is useful in many cases:
 
