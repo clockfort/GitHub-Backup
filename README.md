@@ -91,7 +91,7 @@ Example:
 github-backup LineageOS /home/mohamed786/githubbak -o LineageOS
 ```
 
-## Use a a personal access token (PAT) instead of your password
+## Use a personal access token (PAT) instead of your password
 
 You can generate a dedicated personal access token instead of using your GitHub password.
 
