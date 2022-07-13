@@ -10,6 +10,7 @@ Created: Fri Jun 15 2012
 
 
 import os
+import re
 import errno
 import codecs
 import json
@@ -74,14 +75,13 @@ def main():
     args.backupdir = args.backupdir.rstrip("/")
 
     # Make the connection to Github here.
-    config = {}
+    config = {'login_or_token': args.login_or_token}
     if args.password == False:
         # no password option given, continue unauthenticated
         # unauthenticated users can only use http git method
         args.type = 'http'
     elif args.password == None:
         # password option given, but no password value given
-        config = {'login_or_token': args.login_or_token}
         if os.path.isfile(CONFFILE):
             cfg = ConfigParser()
             cfg.read(CONFFILE)
@@ -94,7 +94,6 @@ def main():
             if password:
                 config['password'] = password
     else:
-        config = {'login_or_token': args.login_or_token}
         config['password'] = args.password
 
     LOGGER.debug("Github config: %r", config)
@@ -105,28 +104,33 @@ def main():
     if not os.path.exists(args.backupdir):
         mkdir_p(args.backupdir)
 
-    if args.organization:
-        if args.password:
-            account = gh.get_organization(args.organization)
-        else:
-            account = gh.get_organization(args.login_or_token)
-    else:
-        if args.username:
-            account = gh.get_user(args.username)
-        elif config.get('password', None):
-            account = gh.get_user()
-        else:
-            account = gh.get_user(args.login_or_token)
+    while True:
+        try:
+            if args.organization:
+                account = gh.get_organization(args.organization)
+            else:
+                if args.username:
+                    account = gh.get_user(args.username)
+                elif config.get('password', None):
+                    account = gh.get_user()
+                else:
+                    account = gh.get_user(args.login_or_token)
 
-    IS_AUTHORIZED = isinstance(account, github.AuthenticatedUser.AuthenticatedUser)
-    assert not (bool(config.get('password', None)) ^ IS_AUTHORIZED), account
+            break
+        except github.BadCredentialsException:
+            LOGGER.info("Given login_or_token is not authenticated, ignoring...")
+            # Reset gh client, try without auth
+            gh = github.Github()
+
+    IS_AUTHORIZED = isinstance(account, (github.AuthenticatedUser.AuthenticatedUser, github.Organization.Organization))
+    assert (bool(config.get('password', None)) or IS_AUTHORIZED), account
 
     if args.include_keys and not IS_AUTHORIZED:
         LOGGER.info("Cannot backup keys with unauthenticated account, ignoring...")
         args.include_keys = False
 
     filters = {}
-    if IS_AUTHORIZED:
+    if isinstance(account, github.AuthenticatedUser.AuthenticatedUser):
         # Get all repos
         filters = {
             'affiliation': ','.join(args.affiliation),
@@ -304,7 +308,7 @@ def init_parser():
     parser.add_argument("-m", "--mirror", help="Create a bare mirror", action="store_true")
     parser.add_argument("-f", "--skip-forks", help="Skip forks", action="store_true")
     parser.add_argument("--skip-repos", help="Skip backing up repositories", action="store_true")
-    parser.add_argument("-g", "--git", nargs="+", help="Pass extra arguments to git", type=list, default=[], metavar="ARGS")
+    parser.add_argument("-g", "--git", help="Pass extra arguments to git", action='append', default=[], metavar="ARGS")
     parser.add_argument("-t", "--type", help="Select the protocol for cloning", choices=['git', 'http', 'ssh'], default='ssh')
     parser.add_argument("-s", "--suffix", help="Add suffix to repository directory names", default="")
     parser.add_argument("-u", "--username", help="Backup USER account", metavar="USER")
@@ -471,12 +475,20 @@ class RepositoryBackup(object):
 
         if self.is_gist:
             url = repo.git_pull_url
-        elif args.type == 'http' or not IS_AUTHORIZED:
-            url = repo.clone_url
         elif args.type == 'ssh':
             url = repo.ssh_url
         elif args.type == 'git':
             url = repo.git_url
+        elif args.type == 'http' or not IS_AUTHORIZED:
+            if re.match('^ghp_.+$', args.login_or_token):
+                url = re.sub('^https://', f'https://{args.login_or_token}:x-auth-basic@', repo.clone_url)
+            elif args.password:
+                if args.username:
+                    url = re.sub('^https://', f'https://{args.username}:{args.password}@', repo.clone_url)
+                else:
+                    url = re.sub('^https://', f'https://{args.login_or_token}:{args.password}@', repo.clone_url)
+            else:
+                url = repo.clone_url
         self.url = url
 
         self.wiki_url = None
